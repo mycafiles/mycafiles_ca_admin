@@ -17,7 +17,9 @@ const ClientModals = ({
     handleAddClient, handleEditClient, handleDeleteClient,
     handleBulkUpload, bulkFile, setBulkFile,
     isUploading, uploadProgress,
-    selectedClient
+    selectedClient,
+    handleInputChange,
+    submitting
 }) => {
     const theme = useMantineTheme();
     const openRef = useRef(null);
@@ -42,6 +44,10 @@ const ClientModals = ({
                 email: 'contact@kriyona.com',
                 gstNumber: '24ABCDE1234F1Z5',
                 tanNumber: 'ABCD12345E',
+                tradeNumber: 'Kriyona Trade',
+                gstId: 'GSTUSER123',
+                gstPassword: 'password123',
+                address: '123 Business St, City',
                 dob: '2015-05-20'
             }
         ];
@@ -83,12 +89,16 @@ const ClientModals = ({
 
     // 2. Auto-Select Client Type Logic
     useEffect(() => {
-        if (formData.gstNumber || formData.tanNumber) {
+        if (formData.gstNumber) {
             if (formData.type !== 'BUSINESS') {
                 setFormData(prev => ({ ...prev, type: 'BUSINESS' }));
             }
+        } else {
+            if (formData.type !== 'INDIVIDUAL') {
+                setFormData(prev => ({ ...prev, type: 'INDIVIDUAL' }));
+            }
         }
-    }, [formData.gstNumber, formData.tanNumber, setFormData, formData.type]);
+    }, [formData.gstNumber, setFormData, formData.type]);
 
     return (
         <>
@@ -102,25 +112,15 @@ const ClientModals = ({
             >
                 <form onSubmit={addModalOpen ? handleAddClient : handleEditClient}>
                     <Stack gap="md">
-                        <Select
-                            label="Account Type"
-                            placeholder="Select account type"
-                            leftSection={formData.type === 'BUSINESS' ? <IconBuildingSkyscraper size={18} /> : <IconUser size={18} />}
-                            value={formData.type}
-                            onChange={(value) => setFormData({ ...formData, type: value })}
-                            data={[
-                                { value: 'INDIVIDUAL', label: 'Individual Client' },
-                                { value: 'BUSINESS', label: 'Business Client' },
-                            ]}
-                            radius="md"
-                        />
+
 
                         <Group grow align="flex-start">
                             <TextInput
-                                label="Cleint Name"
+                                label="Client Name"
+                                withAsterisk
                                 placeholder="Rajesh Kumar"
                                 value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                onChange={(e) => handleInputChange('name', e.target.value)}
                                 error={errors.name}
                                 leftSection={<IconUser size={18} color="var(--mantine-color-dimmed)" />}
                                 radius="md"
@@ -130,20 +130,41 @@ const ClientModals = ({
                         <Group grow align="flex-start">
                             <TextInput
                                 label="Phone Number"
+                                withAsterisk
                                 placeholder="98765 43210"
                                 value={formData.mobileNumber}
-                                onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+                                onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
                                 error={errors.mobileNumber}
                                 leftSection={<IconPhone size={18} color="var(--mantine-color-dimmed)" />}
                                 radius="md"
                             />
                             <TextInput
                                 label="PAN Card Number"
+                                withAsterisk
                                 placeholder="ABCDE1234F"
                                 value={formData.panNumber}
-                                onChange={(e) => setFormData({ ...formData, panNumber: e.target.value.toUpperCase() })}
+                                onChange={(e) => handleInputChange('panNumber', e.target.value.toUpperCase())}
                                 error={errors.panNumber}
                                 leftSection={<IconIdBadge size={18} color="var(--mantine-color-dimmed)" />}
+                                radius="md"
+                            />
+                        </Group>
+
+                        <Group grow align="flex-start">
+                            <TextInput
+                                label="Trade Name"
+                                placeholder="Enter Trade Name or Number"
+                                value={formData.tradeNumber || ''}
+                                onChange={(e) => handleInputChange('tradeNumber', e.target.value)}
+                                leftSection={<IconBuildingSkyscraper size={18} color="var(--mantine-color-dimmed)" />}
+                                radius="md"
+                            />
+                            <TextInput
+                                label="Address"
+                                placeholder="Enter Address"
+                                value={formData.address || ''}
+                                onChange={(e) => handleInputChange('address', e.target.value)}
+                                leftSection={<IconUser size={18} color="var(--mantine-color-dimmed)" />}
                                 radius="md"
                             />
                         </Group>
@@ -151,12 +172,14 @@ const ClientModals = ({
                         <Group grow align="flex-start" mt="md">
                             <DateInput
                                 label="Date of Birth"
-                                placeholder="Pick date"
+                                placeholder="DD MMMM YYYY"
                                 value={formData.dob}
-                                onChange={(date) => setFormData({ ...formData, dob: date })}
-                                icon={<IconCalendar size={18} />}
+                                onChange={(date) => handleInputChange('dob', date)}
+                                leftSection={<IconCalendar size={18} color="var(--mantine-color-dimmed)" />}
                                 radius="md"
                                 required
+                                clearable
+                                valueFormat="DD MMM YYYY"
                             />
                         </Group>
 
@@ -169,19 +192,38 @@ const ClientModals = ({
                                 description="Auto-creates GST Folders if provided"
                                 placeholder="24ABCDE1234F1Z5"
                                 value={formData.gstNumber || ''}
-                                onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value.toUpperCase() })}
+                                onChange={(e) => handleInputChange('gstNumber', e.target.value.toUpperCase())}
                                 error={errors.gstNumber}
                                 leftSection={<IconFileSpreadsheet size={18} color="var(--mantine-color-dimmed)" />}
                                 radius="md"
                             />
                             <TextInput
-                                label="TAN Number"
+                                label="TDS Number"
                                 description="Optional"
                                 placeholder="ABCD12345E"
                                 value={formData.tanNumber || ''}
-                                onChange={(e) => setFormData({ ...formData, tanNumber: e.target.value.toUpperCase() })}
+                                onChange={(e) => handleInputChange('tanNumber', e.target.value.toUpperCase())}
                                 error={errors.tanNumber}
                                 leftSection={<IconFileSpreadsheet size={18} color="var(--mantine-color-dimmed)" />}
+                                radius="md"
+                            />
+                        </Group>
+
+                        <Group grow align="flex-start" mt="sm">
+                            <TextInput
+                                label="GST ID"
+                                placeholder="Enter GST ID"
+                                value={formData.gstId || ''}
+                                onChange={(e) => handleInputChange('gstId', e.target.value)}
+                                leftSection={<IconIdBadge size={18} color="var(--mantine-color-dimmed)" />}
+                                radius="md"
+                            />
+                            <TextInput
+                                label="GST Password"
+                                placeholder="Enter GST Password"
+                                value={formData.gstPassword || ''}
+                                onChange={(e) => handleInputChange('gstPassword', e.target.value)}
+                                leftSection={<IconUser size={18} color="var(--mantine-color-dimmed)" />}
                                 radius="md"
                             />
                         </Group>
@@ -201,16 +243,18 @@ const ClientModals = ({
                                 size="md"
                                 radius="md"
                                 leftSection={<IconPlus size={18} />}
+                                loading={submitting}
+                                disabled={submitting}
                             >
                                 {addModalOpen ? 'Create Client' : 'Save Changes'}
                             </Button>
                         </Group>
                     </Stack>
                 </form>
-            </Modal>
+            </Modal >
 
             {/* Bulk Upload Modal */}
-            <Modal
+            < Modal
                 opened={bulkModalOpen}
                 onClose={() => {
                     if (isUploading) return;
@@ -316,7 +360,7 @@ const ClientModals = ({
                         </Button>
                     </Stack>
                 </Stack>
-            </Modal>
+            </Modal >
         </>
     );
 };

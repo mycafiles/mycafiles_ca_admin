@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Title, Text, Button, Group, Stack, Card, Badge, Switch, Modal, TextInput, NumberInput, ActionIcon, LoadingOverlay, FileInput, Image, AspectRatio } from '@mantine/core';
+import { modals } from '@mantine/modals';
 import { IconPlus, IconTrash, IconSpeakerphone, IconUpload, IconPhoto } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import bannerService from '../services/bannerService';
@@ -65,14 +66,26 @@ export default function BannerManagement() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this banner?')) return;
-        try {
-            await bannerService.deleteBanner(id);
-            notifications.show({ title: 'Deleted', message: 'Banner removed', color: 'blue' });
-            fetchBanners();
-        } catch (error) {
-            notifications.show({ title: 'Error', message: 'Failed to delete banner', color: 'red' });
-        }
+        modals.openConfirmModal({
+            title: 'Delete Banner',
+            centered: true,
+            children: (
+                <Text size="sm">
+                    Are you sure you want to delete this banner? It will be removed from the mobile app immediately.
+                </Text>
+            ),
+            labels: { confirm: 'Delete', cancel: 'Cancel' },
+            confirmProps: { color: 'red' },
+            onConfirm: async () => {
+                try {
+                    await bannerService.deleteBanner(id);
+                    notifications.show({ title: 'Deleted', message: 'Banner removed', color: 'blue' });
+                    fetchBanners();
+                } catch (error) {
+                    notifications.show({ title: 'Error', message: 'Failed to delete banner', color: 'red' });
+                }
+            }
+        });
     };
 
     const handleToggle = async (id) => {

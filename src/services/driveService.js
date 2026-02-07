@@ -33,8 +33,33 @@ export const driveService = {
     },
 
     // 4. Delete File
+    // 4. Delete File (Soft Delete)
     deleteFile: async (id) => {
         const response = await api.delete(`/drive/files/${id}`);
+        return response.data;
+    },
+
+    // 5. Delete Folder (Soft Delete)
+    deleteFolder: async (id) => {
+        const response = await api.delete(`/drive/folders/${id}`);
+        return response.data;
+    },
+
+    // 6. Get Recycle Bin Items
+    getBinItems: async (clientId) => {
+        const response = await api.get(`/drive/${clientId}/bin`);
+        return response.data;
+    },
+
+    // 7. Restore Item
+    restoreItem: async (type, id) => {
+        const response = await api.put(`/drive/restore/${type}/${id}`);
+        return response.data;
+    },
+
+    // 8. Permanent Delete
+    permanentDelete: async (type, id) => {
+        const response = await api.delete(`/drive/permanent/${type}/${id}`);
         return response.data;
     }
 };

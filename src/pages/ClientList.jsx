@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Title, Text, Button, Group, Stack, Box, ThemeIcon, Container } from '@mantine/core';
+import { modals } from '@mantine/modals';
 import { IconPlus } from '@tabler/icons-react';
 
 import {
@@ -11,12 +12,14 @@ import {
     deleteClient,
     bulkUploadClients
 } from '../store/slices/clientSlice';
+import { notifications } from '@mantine/notifications';
 
 // Modular Components
 import ClientStats from '../components/clients/ClientStats';
 import ClientFilters from '../components/clients/ClientFilters';
 import ClientTable from '../components/clients/ClientTable';
 import ClientModals from '../components/clients/ClientModals';
+import BulkUploadResultModal from '../components/clients/BulkUploadResultModal';
 
 export default function ClientList() {
     const navigate = useNavigate();
@@ -35,6 +38,8 @@ export default function ClientList() {
     const [bulkFile, setBulkFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [resultModalOpen, setResultModalOpen] = useState(false);
+    const [uploadResult, setUploadResult] = useState(null);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -43,6 +48,10 @@ export default function ClientList() {
         panNumber: '',
         gstNumber: '',
         tanNumber: '',
+        tradeNumber: '',
+        gstId: '',
+        gstPassword: '',
+        address: '',
         dob: null,
         type: 'INDIVIDUAL'
     });
@@ -63,42 +72,152 @@ export default function ClientList() {
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [isUploading]);
 
+    const validateField = (name, value) => {
+        let error = '';
+        if (name === 'name' && value.length < 2) error = 'Name too short';
+
+        if (name === 'mobileNumber' && !/^\d{10}$/.test(value)) error = 'Invalid mobile number (10 digits required)';
+
+        if (name === 'panNumber' && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) {
+            error = 'Invalid PAN Number (Ex: ABCDE1234F)';
+        }
+
+        if (name === 'gstNumber' && value) {
+            const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+            if (!gstRegex.test(value)) {
+                error = 'Invalid GST Number (Ex: 22ABCDE1234F1Z5)';
+            } else if (formData.panNumber && value.substring(2, 12) !== formData.panNumber) {
+                error = 'GST Number does not match the entered PAN';
+            }
+        }
+
+        if (name === 'tanNumber' && value) {
+            if (value.length !== 10) {
+                error = 'TDS Number must be 10 characters long';
+            }
+        }
+
+        return error;
+    };
+
+    const handleInputChange = (name, value) => {
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        const error = validateField(name, value);
+        setErrors(prev => ({ ...prev, [name]: error }));
+    };
+
     const validate = () => {
         const newErrors = {};
         if (formData.name.length < 2) newErrors.name = 'Name too short';
-        if (!/^\d{10}$/.test(formData.mobileNumber)) newErrors.mobileNumber = 'Invalid mobile number';
-        if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panNumber)) newErrors.panNumber = 'Invalid PAN format';
-        if (formData.gstNumber && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(formData.gstNumber)) {
-            newErrors.gstNumber = 'Invalid GST format';
+
+        if (!/^\d{10}$/.test(formData.mobileNumber)) newErrors.mobileNumber = 'Invalid mobile number (10 digits required)';
+
+        // PAN: 5 uppercase letters, 4 digits, 1 uppercase letter
+        if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panNumber)) {
+            newErrors.panNumber = 'Invalid PAN Number (Ex: ABCDE1234F)';
         }
-        if (formData.tanNumber && !/^[A-Z]{4}[0-9]{5}[A-Z]{1}$/.test(formData.tanNumber)) {
-            newErrors.tanNumber = 'Invalid TAN format';
+
+        // GST: 2 digits + PAN + 1 char + Z + 1 char
+        if (formData.gstNumber) {
+            const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+            if (!gstRegex.test(formData.gstNumber)) {
+                newErrors.gstNumber = 'Invalid GST Number (Ex: 22ABCDE1234F1Z5)';
+            } else if (formData.panNumber && formData.gstNumber.substring(2, 12) !== formData.panNumber) {
+                newErrors.gstNumber = 'GST Number does not match the entered PAN';
+            }
         }
+
+        // TDS: Length 10
+        if (formData.tanNumber) {
+            if (formData.tanNumber.length !== 10) {
+                newErrors.tanNumber = 'TDS Number must be 10 characters long';
+            }
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
+    const [submitting, setSubmitting] = useState(false);
+
+    // ... (rest of state)
+
     const handleAddClient = async (e) => {
         e.preventDefault();
         if (!validate()) return;
-        const result = await dispatch(addClient(formData));
-        if (!result.error) {
-            setAddModalOpen(false);
-            setFormData({ name: '', mobileNumber: '', panNumber: '', gstNumber: '', tanNumber: '', dob: null, type: 'INDIVIDUAL' });
+
+        setSubmitting(true);
+        try {
+            const result = await dispatch(addClient(formData));
+            if (!result.error) {
+                setAddModalOpen(false);
+                setFormData({ name: '', mobileNumber: '', panNumber: '', gstNumber: '', tanNumber: '', tradeNumber: '', gstId: '', gstPassword: '', address: '', dob: null, type: 'INDIVIDUAL' });
+            }
+        } finally {
+            setSubmitting(false);
         }
     };
 
     const handleEditClient = async (e) => {
         e.preventDefault();
         if (!validate()) return;
-        const result = await dispatch(updateClient({ id: selectedClient._id, data: formData }));
-        if (!result.error) setEditModalOpen(false);
+
+        modals.openConfirmModal({
+            title: 'Confirm Update',
+            children: (
+                <Text size="sm">
+                    Are you sure you want to update the details for <strong>{formData.name}</strong>?
+                </Text>
+            ),
+            labels: { confirm: 'Update Client', cancel: 'Cancel' },
+            confirmProps: { color: 'blue', loading: submitting },
+            onConfirm: async () => {
+                setSubmitting(true);
+                try {
+                    const result = await dispatch(updateClient({ id: selectedClient._id, data: formData }));
+                    if (!result.error) setEditModalOpen(false);
+                } finally {
+                    setSubmitting(false);
+                }
+            }
+        });
     };
 
     const handleDeleteClient = (id) => {
-        if (window.confirm('Are you sure you want to remove this client? This action cannot be undone.')) {
-            dispatch(deleteClient(id));
-            setEditModalOpen(false);
+        modals.openConfirmModal({
+            title: 'Delete Client',
+            centered: true,
+            children: (
+                <Text size="sm">
+                    Are you sure you want to remove this client? This action cannot be undone.
+                </Text>
+            ),
+            labels: { confirm: 'Delete Client', cancel: 'Cancel' },
+            confirmProps: { color: 'red' },
+            onConfirm: () => {
+                dispatch(deleteClient(id));
+                setEditModalOpen(false);
+            }
+        });
+    };
+
+    const handleStatusChange = async (id, isActive) => {
+        try {
+            const result = await dispatch(updateClient({ id, data: { isActive } }));
+            if (!result.error) {
+                notifications.show({
+                    title: 'Status Updated',
+                    message: `Client ${isActive ? 'activated' : 'deactivated'} successfully`,
+                    color: 'green'
+                });
+            }
+        } catch (err) {
+            notifications.show({
+                title: 'Update Failed',
+                message: 'Failed to update client status',
+                color: 'red'
+            });
         }
     };
 
@@ -110,6 +229,10 @@ export default function ClientList() {
             panNumber: client.panNumber,
             gstNumber: client.gstNumber || '',
             tanNumber: client.tanNumber || '',
+            tradeNumber: client.tradeNumber || '',
+            gstId: client.gstId || '',
+            gstPassword: client.gstPassword || '',
+            address: client.address || '',
             dob: client.dob ? new Date(client.dob) : null,
             type: client.type
         });
@@ -131,11 +254,16 @@ export default function ClientList() {
 
         if (!result.error) {
             setUploadProgress(100);
+
             setTimeout(() => {
                 setBulkModalOpen(false);
                 setBulkFile(null);
                 setIsUploading(false);
                 setUploadProgress(0);
+
+                // Show result modal instead of notification
+                setUploadResult(result.payload);
+                setResultModalOpen(true);
             }, 500);
         } else {
             setIsUploading(false);
@@ -164,33 +292,53 @@ export default function ClientList() {
 
     return (
         <Stack gap="xl" py="sm" >
-            {/* Page Header */}
-            <Group justify="space-between" align="flex-end">
-                <Box>
-                    <Title order={1} fw={900} tracking="tight">Client Management</Title>
-                    <Text c="dimmed" fw={500}>Manage and track your client base and compliance status.</Text>
-                </Box>
-                <Button
-                    size="lg"
-                    radius="md"
-                    leftSection={<IconPlus size={18} stroke={3} />}
-                    onClick={() => {
-                        setFormData({
-                            name: '',
-                            mobileNumber: '',
-                            panNumber: '',
-                            gstNumber: '',
-                            tanNumber: '',
-                            dob: null,
-                            type: 'INDIVIDUAL'
-                        });
-                        setAddModalOpen(true);
-                    }}
-                >
-                    Add Client
-                </Button>
+            {/* Page Header with Actions */}
+            <Box>
+                <Group justify="space-between" align="flex-start" mb="md">
+                    <Box>
+                        <Title order={1} fw={900} size="32px" mb={4}>Client Management</Title>
+                        <Text c="dimmed" size="sm" fw={500}>Manage and track your client base and compliance status</Text>
+                    </Box>
+                </Group>
 
-            </Group>
+                {/* Action Buttons Bar */}
+                <Group gap="sm" mt="lg">
+                    <Button
+                        size="md"
+                        radius="md"
+                        leftSection={<IconPlus size={18} stroke={2.5} />}
+                        onClick={() => {
+                            setFormData({
+                                name: '',
+                                mobileNumber: '',
+                                panNumber: '',
+                                gstNumber: '',
+                                tanNumber: '',
+                                tradeNumber: '',
+                                gstId: '',
+                                gstPassword: '',
+                                address: '',
+                                dob: null,
+                                type: 'INDIVIDUAL'
+                            });
+                            setAddModalOpen(true);
+                        }}
+                        style={{ height: '40px' }}
+                    >
+                        Add Client
+                    </Button>
+                    <Button
+                        size="md"
+                        radius="md"
+                        variant="outline"
+                        leftSection={<IconPlus size={18} stroke={2.5} />}
+                        onClick={() => setBulkModalOpen(true)}
+                        style={{ height: '40px' }}
+                    >
+                        Bulk Import
+                    </Button>
+                </Group>
+            </Box>
 
             {/* Statistics Section */}
             <ClientStats
@@ -199,6 +347,7 @@ export default function ClientList() {
                 setFilterType={setFilterType}
                 onBulkUpload={() => setBulkModalOpen(true)}
             />
+
 
             {/* Filter & Actions Section */}
             <ClientFilters
@@ -216,6 +365,7 @@ export default function ClientList() {
                 loading={loading}
                 onRowClick={(row) => navigate(`/dashboard/clients/${row._id}`)}
                 onEdit={handleEditClick}
+                onStatusChange={handleStatusChange}
             />
 
             {/* Feature Modals */}
@@ -238,6 +388,20 @@ export default function ClientList() {
                 isUploading={isUploading}
                 uploadProgress={uploadProgress}
                 selectedClient={selectedClient}
+                handleInputChange={handleInputChange}
+                submitting={submitting}
+            />
+
+            {/* Bulk Upload Result Modal */}
+            <BulkUploadResultModal
+                opened={resultModalOpen}
+                onClose={() => {
+                    setResultModalOpen(false);
+                    setUploadResult(null);
+                    // Refresh client list after closing result modal
+                    dispatch(fetchClients());
+                }}
+                result={uploadResult}
             />
         </Stack>
     );

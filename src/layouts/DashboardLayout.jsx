@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
 import {
     IconUsers,
+    IconUser,
     IconLayoutGrid,
     IconFileText,
     IconFolder,
@@ -14,7 +15,8 @@ import {
     IconBuildingBank,
     IconLayoutSidebarLeftCollapse,
     IconLayoutSidebarLeftExpand,
-    IconShieldCheck
+    IconShieldCheck,
+    IconTrash
 } from '@tabler/icons-react';
 import Button from '../components/Button';
 
@@ -35,6 +37,7 @@ export default function DashboardLayout() {
         { label: 'Dashboard', icon: IconLayoutGrid, path: '/dashboard/home' },
         { label: 'Clients', icon: IconUsers, path: '/dashboard/clients' },
         { label: 'Banners', icon: IconBell, path: '/dashboard/banners' },
+        { label: 'Recycle Bin', icon: IconTrash, path: '/dashboard/bin' },
         // { label: 'Documents', icon: IconFolder, path: '/dashboard/documents' },
         // { label: 'Tax Returns', icon: IconFileText, path: '/dashboard/tax-returns' },
         // { label: 'Reports', icon: IconChartBar, path: '/dashboard/reports' },
@@ -102,8 +105,8 @@ export default function DashboardLayout() {
                                 : 'text-text-secondary hover:bg-slate-50 hover:text-text-primary'}
                         `}
                     >
-                        <IconSettings size={22} stroke={2.5} className="text-slate-400 group-hover:text-text-primary" />
-                        <span className="text-[15px] font-bold">Settings</span>
+                        <IconUser size={22} stroke={2.5} className="text-slate-400 group-hover:text-text-primary" />
+                        <span className="text-[15px] font-bold">My Profile</span>
                     </Link>
 
                     {/* Profile Card */}

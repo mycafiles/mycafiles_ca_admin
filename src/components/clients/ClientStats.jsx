@@ -1,8 +1,9 @@
 import React from 'react';
-import { Card, Text, Group, ThemeIcon, Grid, Box, UnstyledButton } from '@mantine/core';
-import { IconUsers, IconBuildingSkyscraper, IconUser, IconPlus } from '@tabler/icons-react';
+import { Card, Text, Group, ThemeIcon, Grid, Box } from '@mantine/core';
+import { IconUsers, IconBuildingSkyscraper, IconUser, IconTrendingUp } from '@tabler/icons-react';
+import { motion } from 'framer-motion';
 
-const ClientStats = ({ stats, filterType, setFilterType, onBulkUpload }) => {
+const ClientStats = ({ stats, filterType, setFilterType }) => {
     const statItems = [
         { id: 'ALL', label: 'All Clients', count: stats.total, icon: IconUsers, color: 'blue' },
         { id: 'BUSINESS', label: 'Business Clients', count: stats.business, icon: IconBuildingSkyscraper, color: 'indigo' },
@@ -11,80 +12,71 @@ const ClientStats = ({ stats, filterType, setFilterType, onBulkUpload }) => {
 
     return (
         <Grid gutter="md">
-            {statItems.map((s) => (
-                <Grid.Col key={s.id} span={{ base: 12, sm: 6, lg: 3 }}>
-                    <Card
-                        withBorder
-                        padding="lg"
-                        radius="md"
-                        onClick={() => setFilterType(s.id)}
-                        style={{
-                            cursor: 'pointer',
-                            borderColor: filterType === s.id ? 'var(--mantine-color-blue-filled)' : undefined,
-                            backgroundColor: filterType === s.id ? 'var(--mantine-color-blue-light)' : 'white',
-                            transition: 'all 0.2s ease'
-                        }}
-                        className="hover:shadow-sm"
+            {statItems.map((s, index) => (
+                <Grid.Col key={s.id} span={{ base: 12, sm: 6, lg: 4 }}>
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ y: -4 }}
                     >
-                        <Group justify="space-between" mb="xs">
-                            <ThemeIcon
-                                size="lg"
-                                radius="md"
-                                variant="light"
-                                color={s.color}
-                            >
-                                <s.icon size={20} />
-                            </ThemeIcon>
-                            {filterType === s.id && (
-                                <Box
-                                    w={8}
-                                    h={8}
-                                    style={{
-                                        borderRadius: '50%',
-                                        backgroundColor: 'var(--mantine-color-blue-filled)',
-                                        boxShadow: '0 0 0 4px var(--mantine-color-blue-light)'
-                                    }}
-                                />
-                            )}
-                        </Group>
+                        <Card
+                            withBorder
+                            padding="lg"
+                            radius="md"
+                            onClick={() => setFilterType(s.id)}
+                            style={{
+                                cursor: 'pointer',
+                                borderWidth: '2px',
+                                borderColor: filterType === s.id ? 'var(--mantine-color-blue-filled)' : 'var(--mantine-color-gray-3)',
+                                backgroundColor: filterType === s.id ? 'var(--mantine-color-blue-light)' : 'white',
+                                transition: 'all 0.2s ease',
+                                height: '100%'
+                            }}
+                            className="hover:shadow-md"
+                        >
+                            <Group justify="space-between" mb="md">
+                                <ThemeIcon
+                                    size="xl"
+                                    radius="md"
+                                    variant="light"
+                                    color={s.color}
+                                >
+                                    <s.icon size={24} />
+                                </ThemeIcon>
+                                {filterType === s.id && (
+                                    <Box
+                                        w={10}
+                                        h={10}
+                                        style={{
+                                            borderRadius: '50%',
+                                            backgroundColor: 'var(--mantine-color-blue-filled)',
+                                            boxShadow: '0 0 0 4px var(--mantine-color-blue-light)'
+                                        }}
+                                    />
+                                )}
+                            </Group>
 
-                        <div>
-                            <Text size="xs" c="dimmed" fw={700} tt="uppercase" ls={1}>
-                                {s.label}
-                            </Text>
-                            <Text size="xl" fw={900}>
-                                {s.count}
-                            </Text>
-                        </div>
-                    </Card>
+                            <div>
+                                <Text size="xs" c="dimmed" fw={700} tt="uppercase" ls={1} mb={4}>
+                                    {s.label}
+                                </Text>
+                                <Group gap="xs" align="baseline">
+                                    <Text size="32px" fw={900} lh={1}>
+                                        {s.count}
+                                    </Text>
+                                    {filterType === s.id && s.count > 0 && (
+                                        <Text size="sm" c="blue" fw={600} className="flex items-center gap-1">
+                                            <IconTrendingUp size={14} />
+                                            Active
+                                        </Text>
+                                    )}
+                                </Group>
+                            </div>
+                        </Card>
+                    </motion.div>
                 </Grid.Col>
             ))}
-
-            <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
-                <Card
-                    withBorder
-                    padding="lg"
-                    radius="md"
-                    onClick={onBulkUpload}
-                    style={{
-                        cursor: 'pointer',
-                        borderStyle: 'dashed',
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        textAlign: 'center'
-                    }}
-                    className="hover:bg-gray-50 transition-colors"
-                >
-                    <ThemeIcon size="lg" radius="md" variant="light" color="orange" mb="xs">
-                        <IconPlus size={20} stroke={3} />
-                    </ThemeIcon>
-                    <Text fw={700} size="sm">Bulk Import</Text>
-                    <Text size="xs" c="dimmed">Upload CSV/Excel</Text>
-                </Card>
-            </Grid.Col>
         </Grid>
     );
 };

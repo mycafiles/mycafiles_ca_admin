@@ -58,7 +58,7 @@ export const bulkUploadClients = createAsyncThunk(
         try {
             const response = await clientService.bulkUpload(file, onProgress);
             dispatch(fetchClients());
-            return response.data;
+            return response;
         } catch (err) {
             return rejectWithValue(err.response?.data?.message || 'Bulk upload failed');
         }

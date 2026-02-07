@@ -35,7 +35,7 @@ const Input = ({
                     {...props}
                 />
                 {rightSection && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-300">
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-300">
                         {rightSection}
                     </div>
                 )}

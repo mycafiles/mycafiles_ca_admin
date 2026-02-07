@@ -4,6 +4,7 @@ import {
     Breadcrumbs, Anchor, ThemeIcon, Loader, Center, Button, FileButton,
     Table, SegmentedControl, Box, Transition, Stack, Modal
 } from '@mantine/core';
+import { modals } from '@mantine/modals';
 import { Dropzone, IMAGE_MIME_TYPE, PDF_MIME_TYPE, MS_EXCEL_MIME_TYPE } from '@mantine/dropzone';
 import {
     IconFolderFilled, IconFileTypePdf, IconFileTypeXls,
@@ -21,6 +22,10 @@ export default function DriveExplorer({ clientId, activeYear }) {
     const [loading, setLoading] = useState(false);
     const [previewFile, setPreviewFile] = useState(null);
     const [viewMode, setViewMode] = useState(() => localStorage.getItem('mrd_drive_view_mode') || 'grid'); // 'grid' or 'list'
+
+    const getDownloadUrl = (file) => {
+        return `http://localhost:5001/api/drive/files/download/${file._id}?token=${localStorage.getItem('token')}`;
+    };
 
     const handleViewModeChange = (value) => {
         setViewMode(value);
@@ -64,7 +69,18 @@ export default function DriveExplorer({ clientId, activeYear }) {
     // 3. Filtering Logic
     const currentFolders = data.folders
         .filter(f => f.parentFolderId === currentFolderId)
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+        .sort((a, b) => {
+            // Check if it's a Financial Year folder (Starts with "FY")
+            const isYear = a.name.startsWith('FY') && b.name.startsWith('FY');
+
+            if (isYear) {
+                // Years: Descending (Newest First) -> 2025 before 2024
+                return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
+            } else {
+                // Months/Others: Ascending (Numeric) -> 1-APRIL before 2-MAY
+                return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+            }
+        });
 
     const formatFolderName = (name) => name.replace(/^\d+-/, '');
 
@@ -161,40 +177,51 @@ export default function DriveExplorer({ clientId, activeYear }) {
 
 
     const handleDelete = async (fileId) => {
-        if (!window.confirm('Are you sure you want to delete this file?')) return;
+        modals.openConfirmModal({
+            title: 'Delete File',
+            centered: true,
+            children: (
+                <Text size="sm">
+                    Are you sure you want to delete this file? It will be moved to the Recycle Bin.
+                </Text>
+            ),
+            labels: { confirm: 'Delete', cancel: 'Cancel' },
+            confirmProps: { color: 'red' },
+            onConfirm: async () => {
+                try {
+                    notifications.show({
+                        id: 'deleting',
+                        loading: true,
+                        title: 'Deleting...',
+                        message: 'Please wait while we remove the file',
+                        autoClose: false,
+                        withCloseButton: false,
+                    });
 
-        try {
-            notifications.show({
-                id: 'deleting',
-                loading: true,
-                title: 'Deleting...',
-                message: 'Please wait while we remove the file',
-                autoClose: false,
-                withCloseButton: false,
-            });
+                    await driveService.deleteFile(fileId);
 
-            await driveService.deleteFile(fileId);
+                    notifications.update({
+                        id: 'deleting',
+                        color: 'green',
+                        title: 'Deleted',
+                        message: 'File removed successfully',
+                        loading: false,
+                        autoClose: 2000,
+                    });
 
-            notifications.update({
-                id: 'deleting',
-                color: 'green',
-                title: 'Deleted',
-                message: 'File removed successfully',
-                loading: false,
-                autoClose: 2000,
-            });
-
-            loadData(); // Refresh
-        } catch (err) {
-            notifications.update({
-                id: 'deleting',
-                color: 'red',
-                title: 'Delete failed',
-                message: 'Could not delete the file',
-                loading: false,
-                autoClose: 3000,
-            });
-        }
+                    loadData(); // Refresh
+                } catch (err) {
+                    notifications.update({
+                        id: 'deleting',
+                        color: 'red',
+                        title: 'Delete failed',
+                        message: 'Could not delete the file',
+                        loading: false,
+                        autoClose: 3000,
+                    });
+                }
+            }
+        });
     };
 
     // Render Actions Menu
@@ -209,7 +236,7 @@ export default function DriveExplorer({ clientId, activeYear }) {
                 <Menu.Item
                     leftSection={<IconDownload size={14} />}
                     component="a"
-                    href={file.fileUrl}
+                    href={getDownloadUrl(file)}
                     download
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -242,69 +269,7 @@ export default function DriveExplorer({ clientId, activeYear }) {
 
     return (
         <Box pos="relative" style={{ minHeight: '400px' }} p="md">
-            {/* Persistent Upload Section */}
-            <Box mb="xl">
-                <Dropzone
-                    onDrop={handleUpload}
-                    onReject={(files) => notifications.show({ color: 'red', message: 'File rejected. Check file type/size.' })}
-                    maxSize={10 * 1024 ** 2}
-                    accept={[...IMAGE_MIME_TYPE, ...PDF_MIME_TYPE, ...MS_EXCEL_MIME_TYPE]}
-                    styles={{
-                        root: {
-                            border: '2px dashed var(--mantine-color-gray-3)',
-                            borderRadius: 'var(--mantine-radius-md)',
-                            backgroundColor: 'var(--mantine-color-gray-0)',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                                backgroundColor: 'var(--mantine-color-gray-1)',
-                                borderColor: 'var(--mantine-color-blue-4)',
-                            },
-                        }
-                    }}
-                >
-                    <Stack align="center" gap="xs" py="md">
-                        <ThemeIcon size={40} variant="light" color="blue" radius="md">
-                            <IconUpload size={24} />
-                        </ThemeIcon>
-                        <Box style={{ textAlign: 'center' }}>
-                            <Text fw={700} size="sm">Click to upload or drag and drop</Text>
-                            <Text size="xs" c="dimmed">PDF, JPG, ZIP (MAX. 50MB) | Supported: Images, PDFs, Excel</Text>
-                        </Box>
-                    </Stack>
 
-                    <Dropzone.Accept>
-                        <Center
-                            pos="absolute"
-                            inset={0}
-                            bg="rgba(77, 128, 255, 0.1)"
-                            style={{ zIndex: 10, border: '2px dashed var(--mantine-color-blue-6)', borderRadius: 8 }}
-                        >
-                            <Stack align="center" gap="xs">
-                                <ThemeIcon size={60} radius="xl" variant="filled">
-                                    <IconUpload size={30} />
-                                </ThemeIcon>
-                                <Text fw={700}>Drop to upload to this folder</Text>
-                            </Stack>
-                        </Center>
-                    </Dropzone.Accept>
-
-                    <Dropzone.Reject>
-                        <Center
-                            pos="absolute"
-                            inset={0}
-                            bg="rgba(250, 82, 82, 0.1)"
-                            style={{ zIndex: 10, border: '2px dashed var(--mantine-color-red-6)', borderRadius: 8 }}
-                        >
-                            <Stack align="center" gap="xs">
-                                <ThemeIcon size={60} radius="xl" color="red">
-                                    <IconX size={30} />
-                                </ThemeIcon>
-                                <Text fw={700} c="red">Unsupported file type or too large</Text>
-                            </Stack>
-                        </Center>
-                    </Dropzone.Reject>
-                </Dropzone>
-            </Box>
 
             {/* Header: Breadcrumbs & Actions */}
             <Group justify="space-between" mb="lg">
@@ -354,6 +319,68 @@ export default function DriveExplorer({ clientId, activeYear }) {
                     />
                 </Group>
             </Group>
+
+            {/* Persistent Upload Section - Only show if inside a folder AND no sub-folders (leaf folder) */}
+            {currentFolderId && currentFolders.length === 0 && (
+                <Box mb="xl">
+                    <Dropzone
+                        onDrop={handleUpload}
+                        onReject={(files) => notifications.show({ color: 'red', message: 'File rejected. Check file type/size.' })}
+                        maxSize={50 * 1024 ** 2}
+                        accept={[...IMAGE_MIME_TYPE, ...PDF_MIME_TYPE, ...MS_EXCEL_MIME_TYPE]}
+                        styles={{
+                            root: {
+                                border: '2px dashed var(--mantine-color-gray-3)',
+                                borderRadius: 'var(--mantine-radius-md)',
+                                backgroundColor: 'var(--mantine-color-gray-0)',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                    backgroundColor: 'var(--mantine-color-gray-1)',
+                                    borderColor: 'var(--mantine-color-blue-4)',
+                                },
+                                position: 'relative' // Ensure absolute children (overlays) stay inside
+                            }
+                        }}
+                    >
+                        <Stack align="center" gap="xs" py="md">
+                            <ThemeIcon size={40} variant="light" color="blue" radius="md">
+                                <IconUpload size={24} />
+                            </ThemeIcon>
+                            <Box style={{ textAlign: 'center' }}>
+                                <Text fw={700} size="sm">Click to upload or drag and drop</Text>
+                                <Text size="xs" c="dimmed">PDF, JPG, ZIP (MAX. 50MB) | Supported: Images, PDFs, Excel</Text>
+                            </Box>
+                        </Stack>
+
+                        <Dropzone.Accept>
+                            <Center
+                                pos="absolute"
+                                inset={0}
+                                bg="rgba(77, 128, 255, 0.1)"
+                                style={{ zIndex: 10, border: '2px dashed var(--mantine-color-blue-6)', borderRadius: 8 }}
+                            >
+
+                            </Center>
+                        </Dropzone.Accept>
+
+                        <Dropzone.Reject>
+                            <Center
+                                pos="absolute"
+                                inset={0}
+                                bg="rgba(250, 82, 82, 0.1)"
+                                style={{ zIndex: 10, border: '2px dashed var(--mantine-color-red-6)', borderRadius: 8 }}
+                            >
+                                <Stack align="center" gap="xs">
+                                    <ThemeIcon size={60} radius="xl" color="red">
+                                        <IconX size={30} />
+                                    </ThemeIcon>
+                                    <Text fw={700} c="red">Unsupported file type or too large</Text>
+                                </Stack>
+                            </Center>
+                        </Dropzone.Reject>
+                    </Dropzone>
+                </Box>
+            )}
 
             {currentFolders.length === 0 && currentFiles.length === 0 ? (
                 <Center mih={200}>
@@ -543,7 +570,7 @@ export default function DriveExplorer({ clientId, activeYear }) {
                                 <Text fw={500}>Preview not available for this file type</Text>
                                 <Button
                                     component="a"
-                                    href={previewFile.fileUrl}
+                                    href={getDownloadUrl(previewFile)}
                                     download
                                     leftSection={<IconDownload size={14} />}
                                     variant="light"

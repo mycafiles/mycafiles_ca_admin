@@ -5,10 +5,14 @@ import CAHome from './pages/CAHome';
 import ClientList from './pages/ClientList';
 import ClientDetails from './pages/ClientDetails';
 import BannerManagement from './pages/BannerManagement';
+import RecycleBin from './pages/RecycleBin';
+import UserProfile from './pages/UserProfile';
+import ToastProvider from './components/ui/Toast';
 
 function App() {
   return (
     <BrowserRouter>
+      <ToastProvider />
       <Routes>
         <Route path="/login" element={<Login />} />
 
@@ -19,6 +23,8 @@ function App() {
           <Route path="clients" element={<ClientList />} />
           <Route path="clients/:id" element={<ClientDetails />} />
           <Route path="banners" element={<BannerManagement />} />
+          <Route path="bin" element={<RecycleBin />} />
+          <Route path="settings" element={<UserProfile />} />
         </Route>
 
         {/* Redirect root to login or dashboard */}

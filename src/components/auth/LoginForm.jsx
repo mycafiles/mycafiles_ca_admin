@@ -8,11 +8,11 @@ const LoginForm = ({ email, setEmail, password, setPassword, loading, error, onS
 
     return (
         <div className="w-full max-w-[440px] flex flex-col items-center">
-            <div className="w-full bg-white p-10 rounded-[24px] shadow-sm border border-slate-100/60 relative">
-                <div className="mb-8 ">
-                    <h3 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Sign in to My CA Files</h3>
+            <div className="w-full bg-white p-10 rounded-[24px] shadow-xl border border-slate-100/60 relative">
+                <div className="mb-8">
+                    <h3 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Welcome Back! 👋</h3>
                     <p className="text-slate-500 text-[15px] font-medium leading-relaxed">
-                        Enter your credentials to access the dashboard.
+                        Sign in to access your CA Admin dashboard
                     </p>
                 </div>
 
