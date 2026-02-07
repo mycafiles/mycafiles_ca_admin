@@ -2,7 +2,7 @@ import axios from 'axios';
 import { nprogress } from '@mantine/nprogress';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5001/api',
+    baseURL: import.meta.env.VITE_API_URL,
 });
 
 // Add a request interceptor to include the token in headers
