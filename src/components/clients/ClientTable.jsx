@@ -17,6 +17,11 @@ const ClientTable = ({ data, loading, onRowClick, onEdit, onStatusChange }) => {
             className="hover:!bg-blue-50"
         >
             <Table.Td>
+                <Text size="sm" fw={600} c="dimmed">
+                    {index + 1}
+                </Text>
+            </Table.Td>
+            <Table.Td>
                 <Group gap="sm">
                     <Avatar
                         size={40}
@@ -156,6 +161,7 @@ const ClientTable = ({ data, loading, onRowClick, onEdit, onStatusChange }) => {
             >
                 <Table.Thead style={{ backgroundColor: '#f8fafc' }}>
                     <Table.Tr style={{ height: '48px' }}>
+                        <Table.Th style={{ width: '60px' }}><HeaderText>Sr No.</HeaderText></Table.Th>
                         <Table.Th><HeaderText>Client Info</HeaderText></Table.Th>
                         <Table.Th><HeaderText>Pan No.</HeaderText></Table.Th>
                         <Table.Th><HeaderText>Mobile No.</HeaderText></Table.Th>

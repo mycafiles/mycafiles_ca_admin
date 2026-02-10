@@ -1,6 +1,7 @@
 // src/pages/Login.jsx
 import { useState } from 'react';
 import { authService } from '../services/authService';
+import { oneSignalService } from '../services/oneSignal';
 import { useNavigate } from 'react-router-dom';
 import BrandingPanel from '../components/auth/BrandingPanel';
 import LoginForm from '../components/auth/LoginForm';
@@ -23,6 +24,13 @@ export default function Login() {
             const data = await authService.caLogin(email, password, 'CAADMIN');
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data));
+
+            // Set OneSignal External User ID
+            if (data.user?._id) {
+                await oneSignalService.setExternalUserId(data.user._id);
+            } else if (data._id) {
+                await oneSignalService.setExternalUserId(data._id);
+            }
 
             if (data.role === 'CAADMIN') {
                 navigate('/dashboard/home');

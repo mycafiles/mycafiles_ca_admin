@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     SimpleGrid, Card, Text, Group, ActionIcon, Menu,
     Breadcrumbs, Anchor, ThemeIcon, Loader, Center, Button, FileButton,
-    Table, SegmentedControl, Box, Transition, Stack, Modal
+    Table, SegmentedControl, Box, Transition, Stack, Modal, ScrollArea
 } from '@mantine/core';
 import { modals } from '@mantine/modals';
 import { Dropzone, IMAGE_MIME_TYPE, PDF_MIME_TYPE, MS_EXCEL_MIME_TYPE } from '@mantine/dropzone';
@@ -24,7 +24,7 @@ export default function DriveExplorer({ clientId, activeYear }) {
     const [viewMode, setViewMode] = useState(() => localStorage.getItem('mrd_drive_view_mode') || 'grid'); // 'grid' or 'list'
 
     const getDownloadUrl = (file) => {
-        return `http://localhost:5001/api/drive/files/download/${file._id}?token=${localStorage.getItem('token')}`;
+        return `${import.meta.env.VITE_API_URL}/drive/files/download/${file._id}?token=${localStorage.getItem('token')}`;
     };
 
     const handleViewModeChange = (value) => {
@@ -265,12 +265,12 @@ export default function DriveExplorer({ clientId, activeYear }) {
         </Menu>
     );
 
+    const isIncomeTaxFolder = breadcrumbs.some(b => b.name?.toLowerCase().includes('income tax'));
+
     if (loading && data.folders.length === 0) return <Center p="xl"><Loader size="sm" /></Center>;
 
     return (
-        <Box pos="relative" style={{ minHeight: '400px' }} p="md">
-
-
+        <Box p="md">
             {/* Header: Breadcrumbs & Actions */}
             <Group justify="space-between" mb="lg">
                 <Group gap="sm">
@@ -320,193 +320,156 @@ export default function DriveExplorer({ clientId, activeYear }) {
                 </Group>
             </Group>
 
-            {/* Persistent Upload Section - Only show if inside a folder AND no sub-folders (leaf folder) */}
-            {currentFolderId && currentFolders.length === 0 && (
-                <Box mb="xl">
-                    <Dropzone
-                        onDrop={handleUpload}
-                        onReject={(files) => notifications.show({ color: 'red', message: 'File rejected. Check file type/size.' })}
-                        maxSize={50 * 1024 ** 2}
-                        accept={[...IMAGE_MIME_TYPE, ...PDF_MIME_TYPE, ...MS_EXCEL_MIME_TYPE]}
-                        styles={{
-                            root: {
-                                border: '2px dashed var(--mantine-color-gray-3)',
-                                borderRadius: 'var(--mantine-radius-md)',
-                                backgroundColor: 'var(--mantine-color-gray-0)',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                    backgroundColor: 'var(--mantine-color-gray-1)',
-                                    borderColor: 'var(--mantine-color-blue-4)',
-                                },
-                                position: 'relative' // Ensure absolute children (overlays) stay inside
-                            }
-                        }}
-                    >
-                        <Stack align="center" gap="xs" py="md">
-                            <ThemeIcon size={40} variant="light" color="blue" radius="md">
-                                <IconUpload size={24} />
+            {/* Content Area - Expands naturally */}
+            <Box>
+                {/* Persistent Upload Section - Show if leaf folder OR if it's an Income Tax folder */}
+                {currentFolderId && (currentFolders.length === 0 || isIncomeTaxFolder) && (
+                    <Box mb="xl">
+                        <Dropzone
+                            onDrop={handleUpload}
+                            onReject={() => notifications.show({ color: 'red', message: 'File rejected. Check file type/size.' })}
+                            maxSize={50 * 1024 ** 2}
+                            accept={[...IMAGE_MIME_TYPE, ...PDF_MIME_TYPE, ...MS_EXCEL_MIME_TYPE]}
+                            styles={{
+                                root: {
+                                    border: '2px dashed var(--mantine-color-gray-3)',
+                                    borderRadius: 'var(--mantine-radius-md)',
+                                    backgroundColor: 'var(--mantine-color-gray-0)',
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': {
+                                        backgroundColor: 'var(--mantine-color-gray-1)',
+                                        borderColor: 'var(--mantine-color-blue-4)',
+                                    },
+                                    position: 'relative'
+                                }
+                            }}
+                        >
+                            <Stack align="center" gap="xs" py="md">
+                                <ThemeIcon size={40} variant="light" color="blue" radius="md">
+                                    <IconUpload size={24} />
+                                </ThemeIcon>
+                                <Box style={{ textAlign: 'center' }}>
+                                    <Text fw={700} size="sm">Click to upload or drag and drop</Text>
+                                    <Text size="xs" c="dimmed">PDF, JPG, ZIP (MAX. 50MB) | Supported: Images, PDFs, Excel</Text>
+                                </Box>
+                            </Stack>
+                        </Dropzone>
+                    </Box>
+                )}
+
+                {currentFolders.length === 0 && currentFiles.length === 0 ? (
+                    <Center mih={200}>
+                        <Stack align="center" gap="xs">
+                            <ThemeIcon size={50} variant="light" color="gray" radius="md">
+                                <IconFolderFilled size={30} />
                             </ThemeIcon>
-                            <Box style={{ textAlign: 'center' }}>
-                                <Text fw={700} size="sm">Click to upload or drag and drop</Text>
-                                <Text size="xs" c="dimmed">PDF, JPG, ZIP (MAX. 50MB) | Supported: Images, PDFs, Excel</Text>
-                            </Box>
+                            <Text c="dimmed" size="sm">This folder is empty</Text>
                         </Stack>
+                    </Center>
+                ) : (
+                    <>
+                        {viewMode === 'grid' ? (
+                            <>
+                                {currentFolders.length > 0 && (
+                                    <Box mb="xl">
+                                        <Text size="xs" fw={700} c="dimmed" mb="sm" tt="uppercase">Folders</Text>
+                                        <SimpleGrid cols={{ base: 2, sm: 3, lg: 4 }} spacing="lg">
+                                            {currentFolders.map(folder => (
+                                                <div
+                                                    key={folder._id}
+                                                    className="cursor-pointer p-6 rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:bg-gray-100 active:bg-gray-200 hover:border-blue-300"
+                                                    onClick={(e) => { e.stopPropagation(); handleEnterFolder(folder); }}
+                                                >
+                                                    <Group wrap="nowrap">
+                                                        <ThemeIcon size={42} variant="light" color="yellow" radius="md">
+                                                            <IconFolderFilled size={24} />
+                                                        </ThemeIcon>
+                                                        <Text size="md" fw={600} truncate>{formatFolderName(folder.name)}</Text>
+                                                    </Group>
+                                                </div>
+                                            ))}
+                                        </SimpleGrid>
+                                    </Box>
+                                )}
 
-                        <Dropzone.Accept>
-                            <Center
-                                pos="absolute"
-                                inset={0}
-                                bg="rgba(77, 128, 255, 0.1)"
-                                style={{ zIndex: 10, border: '2px dashed var(--mantine-color-blue-6)', borderRadius: 8 }}
-                            >
-
-                            </Center>
-                        </Dropzone.Accept>
-
-                        <Dropzone.Reject>
-                            <Center
-                                pos="absolute"
-                                inset={0}
-                                bg="rgba(250, 82, 82, 0.1)"
-                                style={{ zIndex: 10, border: '2px dashed var(--mantine-color-red-6)', borderRadius: 8 }}
-                            >
-                                <Stack align="center" gap="xs">
-                                    <ThemeIcon size={60} radius="xl" color="red">
-                                        <IconX size={30} />
-                                    </ThemeIcon>
-                                    <Text fw={700} c="red">Unsupported file type or too large</Text>
-                                </Stack>
-                            </Center>
-                        </Dropzone.Reject>
-                    </Dropzone>
-                </Box>
-            )}
-
-            {currentFolders.length === 0 && currentFiles.length === 0 ? (
-                <Center mih={200}>
-                    <Stack align="center" gap="xs">
-                        <ThemeIcon size={50} variant="light" color="gray" radius="md">
-                            <IconFolderFilled size={30} />
-                        </ThemeIcon>
-                        <Text c="dimmed" size="sm">This folder is empty</Text>
-                    </Stack>
-                </Center>
-            ) : (
-                <>
-                    {viewMode === 'grid' ? (
-                        <>
-                            {/* Folders Grid */}
-                            {currentFolders.length > 0 && (
-                                <Box mb="xl">
-                                    <Text size="xs" fw={700} c="dimmed" mb="sm" tt="uppercase">Folders</Text>
-                                    <SimpleGrid cols={{ base: 2, sm: 3, lg: 4 }} spacing="lg">
-                                        {currentFolders.map(folder => (
-                                            <Card
-                                                key={folder._id}
-                                                padding="lg"
-                                                radius="md"
-                                                withBorder
-                                                className="cursor-pointer hover:bg-gray-50 hover:border-blue-300 transition-all"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleEnterFolder(folder);
-                                                }}
-                                            >
-                                                <Group wrap="nowrap">
-                                                    <ThemeIcon size={42} variant="light" color="yellow" radius="md">
-                                                        <IconFolderFilled size={24} />
-                                                    </ThemeIcon>
-                                                    <Text size="md" fw={600} truncate>{formatFolderName(folder.name)}</Text>
-                                                </Group>
-                                            </Card>
-                                        ))}
-                                    </SimpleGrid>
-                                </Box>
-                            )}
-
-                            {/* Files Grid */}
-                            {currentFiles.length > 0 && (
-                                <Box>
-                                    <Text size="xs" fw={700} c="dimmed" mb="xs" tt="uppercase">Files</Text>
-                                    <SimpleGrid cols={{ base: 1, sm: 3, lg: 4 }} spacing="md">
-                                        {currentFiles.map(file => (
-                                            <Card
-                                                key={file._id}
-                                                padding="sm"
-                                                radius="md"
-                                                withBorder
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="hover:shadow-xs transition-all"
-                                            >
-                                                <Group justify="space-between" mb="xs" align="start">
-                                                    {getFileIcon(file.fileType)}
-                                                    {renderActions(file)}
-                                                </Group>
-
-                                                <Text size="sm" fw={600} lineClamp={1} title={file.fileName}>{file.fileName}</Text>
-                                                <Group justify="space-between" mt={5}>
-                                                    <Text size="xs" c="dimmed">{new Date(file.createdAt).toLocaleDateString()}</Text>
-                                                    <Text size="xs" c="dimmed">{(file.fileSize / 1024).toFixed(0)} KB</Text>
-                                                </Group>
-                                            </Card>
-                                        ))}
-                                    </SimpleGrid>
-                                </Box>
-                            )}
-                        </>
-                    ) : (
-                        /* List View */
-                        <Table verticalSpacing="sm" highlightOnHover withTableBorder radius="md">
-                            <Table.Thead>
-                                <Table.Tr>
-                                    <Table.Th>Name</Table.Th>
-                                    <Table.Th>Type</Table.Th>
-                                    <Table.Th>Size</Table.Th>
-                                    <Table.Th>Date Modified</Table.Th>
-                                    <Table.Th></Table.Th>
-                                </Table.Tr>
-                            </Table.Thead>
-                            <Table.Tbody>
-                                {currentFolders.map(folder => (
-                                    <Table.Tr
-                                        key={folder._id}
-                                        className="cursor-pointer"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEnterFolder(folder);
-                                        }}
-                                    >
-                                        <Table.Td>
-                                            <Group gap="sm">
-                                                <IconFolderFilled size={18} color="#FAB005" />
-                                                <Text size="sm" fw={500}>{formatFolderName(folder.name)}</Text>
-                                            </Group>
-                                        </Table.Td>
-                                        <Table.Td><Text size="xs" c="dimmed">Folder</Text></Table.Td>
-                                        <Table.Td><Text size="xs" c="dimmed">—</Text></Table.Td>
-                                        <Table.Td><Text size="xs" c="dimmed">{new Date(folder.updatedAt || folder.createdAt).toLocaleDateString()}</Text></Table.Td>
-                                        <Table.Td></Table.Td>
+                                {currentFiles.length > 0 && (
+                                    <Box>
+                                        <Text size="xs" fw={700} c="dimmed" mb="xs" tt="uppercase">Files</Text>
+                                        <SimpleGrid cols={{ base: 1, sm: 3, lg: 4 }} spacing="md">
+                                            {currentFiles.map(file => (
+                                                <Card
+                                                    key={file._id}
+                                                    padding="sm"
+                                                    radius="md"
+                                                    withBorder
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="hover:shadow-xs transition-all"
+                                                >
+                                                    <Group justify="space-between" mb="xs" align="start">
+                                                        {getFileIcon(file.fileType)}
+                                                        {renderActions(file)}
+                                                    </Group>
+                                                    <Text size="sm" fw={600} lineClamp={1}>{file.fileName}</Text>
+                                                    <Group justify="space-between" mt={5}>
+                                                        <Text size="xs" c="dimmed">{new Date(file.createdAt).toLocaleDateString()}</Text>
+                                                        <Text size="xs" c="dimmed">{(file.fileSize / 1024).toFixed(0)} KB</Text>
+                                                    </Group>
+                                                </Card>
+                                            ))}
+                                        </SimpleGrid>
+                                    </Box>
+                                )}
+                            </>
+                        ) : (
+                            <Table verticalSpacing="sm" highlightOnHover withTableBorder radius="md">
+                                <Table.Thead>
+                                    <Table.Tr>
+                                        <Table.Th>Name</Table.Th>
+                                        <Table.Th>Type</Table.Th>
+                                        <Table.Th>Size</Table.Th>
+                                        <Table.Th>Date Modified</Table.Th>
+                                        <Table.Th></Table.Th>
                                     </Table.Tr>
-                                ))}
-                                {currentFiles.map(file => (
-                                    <Table.Tr key={file._id} onClick={(e) => e.stopPropagation()}>
-                                        <Table.Td>
-                                            <Group gap="sm">
-                                                {getFileIcon(file.fileType, 18)}
-                                                <Text size="sm" fw={500}>{file.fileName}</Text>
-                                            </Group>
-                                        </Table.Td>
-                                        <Table.Td><Text size="xs" c="dimmed">{file.fileType?.split('/')[1]?.toUpperCase() || 'FILE'}</Text></Table.Td>
-                                        <Table.Td><Text size="xs" c="dimmed">{(file.fileSize / 1024).toFixed(0)} KB</Text></Table.Td>
-                                        <Table.Td><Text size="xs" c="dimmed">{new Date(file.createdAt).toLocaleDateString()}</Text></Table.Td>
-                                        <Table.Td align="right">{renderActions(file)}</Table.Td>
-                                    </Table.Tr>
-                                ))}
-                            </Table.Tbody>
-                        </Table>
-                    )}
-                </>
-            )}
+                                </Table.Thead>
+                                <Table.Tbody>
+                                    {currentFolders.map(folder => (
+                                        <tr
+                                            key={folder._id}
+                                            className="cursor-pointer border-b border-gray-100 transition-colors duration-200 hover:bg-gray-100 active:bg-gray-200"
+                                            onClick={(e) => { e.stopPropagation(); handleEnterFolder(folder); }}
+                                        >
+                                            <td className="p-3">
+                                                <Group gap="sm">
+                                                    <IconFolderFilled size={18} color="#FAB005" />
+                                                    <Text size="sm" fw={500}>{formatFolderName(folder.name)}</Text>
+                                                </Group>
+                                            </td>
+                                            <td className="p-3"><Text size="xs" c="dimmed">Folder</Text></td>
+                                            <td className="p-3"><Text size="xs" c="dimmed">—</Text></td>
+                                            <td className="p-3"><Text size="xs" c="dimmed">{new Date(folder.updatedAt || folder.createdAt).toLocaleDateString()}</Text></td>
+                                            <td className="p-3"></td>
+                                        </tr>
+                                    ))}
+                                    {currentFiles.map(file => (
+                                        <Table.Tr key={file._id} onClick={(e) => e.stopPropagation()}>
+                                            <Table.Td>
+                                                <Group gap="sm">
+                                                    {getFileIcon(file.fileType, 18)}
+                                                    <Text size="sm" fw={500}>{file.fileName}</Text>
+                                                </Group>
+                                            </Table.Td>
+                                            <Table.Td><Text size="xs" c="dimmed">{file.fileType?.split('/')[1]?.toUpperCase() || 'FILE'}</Text></Table.Td>
+                                            <Table.Td><Text size="xs" c="dimmed">{(file.fileSize / 1024).toFixed(0)} KB</Text></Table.Td>
+                                            <Table.Td><Text size="xs" c="dimmed">{new Date(file.createdAt).toLocaleDateString()}</Text></Table.Td>
+                                            <Table.Td align="right">{renderActions(file)}</Table.Td>
+                                        </Table.Tr>
+                                    ))}
+                                </Table.Tbody>
+                            </Table>
+                        )}
+                    </>
+                )}
+            </Box>
 
             {/* Preview Modal */}
             <Modal

@@ -113,9 +113,9 @@ export default function ClientDetails() {
     const isBusiness = client.type === 'BUSINESS';
 
     return (
-        <div className="h-[calc(100vh-64px)] -mx-6 -mt-6 bg-[#f9fafb] flex flex-col">
+        <div className="-mx-6 -mt-6 bg-[#f9fafb]">
             {/* Header Section */}
-            <div className="bg-white border-b border-[#E5E7EB] px-6 py-4 flex-shrink-0">
+            <div className="bg-white border-b border-[#E5E7EB] px-6 py-4">
                 {/* Back Button Row */}
                 <div className="mb-3">
                     <button
@@ -164,13 +164,13 @@ export default function ClientDetails() {
             </div>
 
             {/* Content - Finder Style Drive Explorer */}
-            <div className="flex-1 overflow-hidden p-6">
-                <div className="h-full bg-white rounded-xl border border-[#E5E7EB] shadow-sm flex flex-col">
+            <div className="p-6">
+                <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-sm">
                     {/* 
                         DriveExplorer handles its own navigation and year selection internally 
                         or we pass a default year.
                     */}
-                    <div className="flex-1 overflow-hidden">
+                    <div>
                         <DriveExplorer
                             clientId={id}
                             activeYear={YEARS[0]} // Pass default, but Explorer should probably handle changing it

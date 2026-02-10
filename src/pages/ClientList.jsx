@@ -335,7 +335,7 @@ export default function ClientList() {
                         onClick={() => setBulkModalOpen(true)}
                         style={{ height: '40px' }}
                     >
-                        Bulk Import
+                        Add Bulk Clients
                     </Button>
                 </Group>
             </Box>

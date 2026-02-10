@@ -1,6 +1,7 @@
 // src/layouts/DashboardLayout.jsx
 import React, { useState } from 'react';
 import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
+import { oneSignalService } from '../services/oneSignal';
 import {
     IconUsers,
     IconUser,
@@ -16,7 +17,8 @@ import {
     IconLayoutSidebarLeftCollapse,
     IconLayoutSidebarLeftExpand,
     IconShieldCheck,
-    IconTrash
+    IconTrash,
+    IconHistory
 } from '@tabler/icons-react';
 import Button from '../components/Button';
 
@@ -27,7 +29,8 @@ export default function DashboardLayout() {
 
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        await oneSignalService.removeExternalUserId();
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         navigate('/login');
@@ -37,6 +40,7 @@ export default function DashboardLayout() {
         { label: 'Dashboard', icon: IconLayoutGrid, path: '/dashboard/home' },
         { label: 'Clients', icon: IconUsers, path: '/dashboard/clients' },
         { label: 'Banners', icon: IconBell, path: '/dashboard/banners' },
+        { label: 'Activity Log', icon: IconHistory, path: '/dashboard/activity' },
         { label: 'Recycle Bin', icon: IconTrash, path: '/dashboard/bin' },
         // { label: 'Documents', icon: IconFolder, path: '/dashboard/documents' },
         // { label: 'Tax Returns', icon: IconFileText, path: '/dashboard/tax-returns' },

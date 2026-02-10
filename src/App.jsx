@@ -6,10 +6,18 @@ import ClientList from './pages/ClientList';
 import ClientDetails from './pages/ClientDetails';
 import BannerManagement from './pages/BannerManagement';
 import RecycleBin from './pages/RecycleBin';
+import ActivityLog from './pages/ActivityLog';
 import UserProfile from './pages/UserProfile';
 import ToastProvider from './components/ui/Toast';
 
+import { useEffect } from 'react';
+import { oneSignalService } from './services/oneSignal';
+
 function App() {
+  useEffect(() => {
+    oneSignalService.init();
+  }, []);
+
   return (
     <BrowserRouter>
       <ToastProvider />
@@ -23,6 +31,7 @@ function App() {
           <Route path="clients" element={<ClientList />} />
           <Route path="clients/:id" element={<ClientDetails />} />
           <Route path="banners" element={<BannerManagement />} />
+          <Route path="activity" element={<ActivityLog />} />
           <Route path="bin" element={<RecycleBin />} />
           <Route path="settings" element={<UserProfile />} />
         </Route>
