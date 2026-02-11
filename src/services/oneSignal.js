@@ -7,8 +7,14 @@ export const oneSignalService = {
         if (this.initialized) return;
 
         try {
+            const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
+            if (!appId) {
+                console.warn('OneSignal App ID not found in environment variables');
+                return;
+            }
+
             await OneSignal.init({
-                appId: import.meta.env.VITE_ONESIGNAL_APP_ID,
+                appId: appId,
                 allowLocalhostAsSecureOrigin: true,
             });
             this.initialized = true;
