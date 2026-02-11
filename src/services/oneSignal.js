@@ -1,12 +1,17 @@
 import OneSignal from 'react-onesignal';
 
 export const oneSignalService = {
+    initialized: false,
+
     async init() {
+        if (this.initialized) return;
+
         try {
             await OneSignal.init({
                 appId: import.meta.env.VITE_ONESIGNAL_APP_ID,
                 allowLocalhostAsSecureOrigin: true,
             });
+            this.initialized = true;
             console.log('OneSignal initialized');
         } catch (e) {
             console.error('OneSignal initialization failed:', e);

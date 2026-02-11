@@ -21,6 +21,7 @@ import {
     IconHistory
 } from '@tabler/icons-react';
 import Button from '../components/Button';
+import NotificationCenter from '../components/notifications/NotificationCenter';
 
 export default function DashboardLayout() {
     const navigate = useNavigate();
@@ -172,9 +173,7 @@ export default function DashboardLayout() {
                             <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                             SYSTEM SECURE
                         </div>
-                        <button className="size-11 bg-white border border-border rounded-2xl flex items-center justify-center text-text-secondary hover:text-primary hover:bg-slate-50 transition-all shadow-sm group">
-                            <IconBell size={20} className="group-hover:rotate-12 transition-transform" />
-                        </button>
+                        <NotificationCenter />
                     </div>
                 </header>
 

@@ -1,9 +1,10 @@
-import { IconUsers, IconFileAnalytics, IconFolder, IconPlus, IconUpload, IconPhoto, IconTrendingUp, IconClock } from '@tabler/icons-react';
+import { IconUsers, IconFileAnalytics, IconFolder, IconPlus, IconUpload, IconPhoto, IconTrendingUp, IconClock, IconFileUpload, IconTrash, IconHistory, IconPlus as IconPlusCircle } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 import { clientService } from '../services/clientService';
+import api from '../services/api';
 
 export default function CAHome() {
     const navigate = useNavigate();
@@ -27,37 +28,65 @@ export default function CAHome() {
     ];
 
     useEffect(() => {
-        const fetchStats = async () => {
+        const fetchDashboardData = async () => {
             try {
-                const data = await clientService.getClients();
-                const clients = data.clients || [];
+                // Fetch Stats (Clients)
+                const clientData = await clientService.getClients();
+
+                // Fetch Recent Activity
+                const activityResponse = await api.get('/activity');
+                const activities = activityResponse.data.data || [];
 
                 setStats({
-                    totalClients: data.results || 0,
+                    totalClients: clientData.results || 0,
                     pendingApprovals: 0,
                     totalFiles: 0,
                     clientGrowth: 15
                 });
 
-                // Get recent 3 clients
-                const recent = clients
-                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                    .slice(0, 3)
-                    .map(client => ({
-                        name: client.name,
-                        time: getRelativeTime(client.createdAt),
-                        type: client.entityType
+                // Get recent 5 activities
+                const formattedRecent = activities
+                    .slice(0, 5)
+                    .map(activity => ({
+                        name: activity.clientName || 'System',
+                        time: getRelativeTime(activity.timestamp),
+                        type: actionLabels[activity.action] || activity.action,
+                        action: activity.action
                     }));
 
-                setRecentActivity(recent);
+                setRecentActivity(formattedRecent);
                 setLoading(false);
             } catch (err) {
-                console.error('Error fetching stats:', err);
+                console.error('Error fetching dashboard data:', err);
                 setLoading(false);
             }
         };
-        fetchStats();
+
+        fetchDashboardData();
+        // Refresh every 60 seconds
+        const interval = setInterval(fetchDashboardData, 60000);
+        return () => clearInterval(interval);
     }, []);
+
+    const actionLabels = {
+        'CREATE_CLIENT': 'Client Created',
+        'UPDATE_CLIENT': 'Client Updated',
+        'DELETE_CLIENT': 'Client Deleted',
+        'GENERATE_FOLDERS': 'Folders Generated',
+        'UPLOAD_FILE': 'File Uploaded',
+        'DELETE_FILE': 'File Deleted',
+        'RESTORE_FILE': 'File Restored',
+        'PERMANENT_DELETE_FILE': 'File Permanently Deleted',
+        'CREATE_FOLDER': 'Folder Created',
+        'DELETE_FOLDER': 'Folder Deleted',
+        'RESTORE_FOLDER': 'Folder Restored',
+        'PERMANENT_DELETE_FOLDER': 'Folder Permanently Deleted',
+        'LOGIN': 'Login',
+        'CA_REGISTER': 'Registration',
+        'UPDATE_PROFILE': 'Profile Updated',
+        'APPROVE_DEVICE': 'Device Approved',
+        'REJECT_DEVICE': 'Device Rejected'
+    };
 
     const getRelativeTime = (date) => {
         const now = new Date();
@@ -316,27 +345,30 @@ export default function CAHome() {
                     </div>
                     {recentActivity.length > 0 ? (
                         <div className="space-y-3">
-                            {recentActivity.map((activity, index) => (
-                                <motion.div
-                                    key={index}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm flex-shrink-0">
-                                        {activity.name.charAt(0)}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-900 truncate">
-                                            {activity.name}
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                            {activity.type} • {activity.time}
-                                        </p>
-                                    </div>
-                                </motion.div>
-                            ))}
+                            {recentActivity.map((activity, index) => {
+                                const isUpload = activity.action === 'UPLOAD_FILE';
+                                return (
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        className={`flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border-l-4 ${isUpload ? 'border-l-blue-500 bg-blue-50/10' : 'border-l-transparent'}`}
+                                    >
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0 ${isUpload ? 'bg-blue-100 text-blue-600' : 'bg-primary/10 text-primary'}`}>
+                                            {isUpload ? <IconBell size={16} stroke={2.5} /> : activity.name.charAt(0)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-gray-900 truncate">
+                                                {activity.type}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {activity.name} • {activity.time}
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="text-center py-8 text-gray-500">

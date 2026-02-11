@@ -11,7 +11,7 @@ import {
     Loader,
     Center
 } from '@mantine/core';
-import { IconHistory, IconSearch } from '@tabler/icons-react';
+import { IconHistory, IconSearch, IconBell } from '@tabler/icons-react';
 import api from '../services/api';
 import dayjs from 'dayjs';
 
@@ -66,9 +66,16 @@ export default function ActivityLog() {
     const rows = logs.map((log) => (
         <Table.Tr key={log._id}>
             <Table.Td>
-                <Badge variant="light" color={getActionColor(log.action)} size="sm">
-                    {actionLabels[log.action] || log.action}
-                </Badge>
+                <Group gap="xs" wrap="nowrap">
+                    {log.action === 'UPLOAD_FILE' && (
+                        <Box className="p-1 bg-blue-50 rounded text-blue-600">
+                            <IconBell size={14} stroke={3} />
+                        </Box>
+                    )}
+                    <Badge variant="light" color={getActionColor(log.action)} size="sm">
+                        {actionLabels[log.action] || log.action}
+                    </Badge>
+                </Group>
             </Table.Td>
             <Table.Td>
                 <Text size="sm" fw={500}>{log.details}</Text>
