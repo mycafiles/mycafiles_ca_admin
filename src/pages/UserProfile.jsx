@@ -10,10 +10,13 @@ import {
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { authService } from '../services/authService';
+import { notificationService } from '../services/notificationService';
+import { IconBellRinging } from '@tabler/icons-react';
 
 export default function UserProfile() {
     const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user') || '{}'));
     const [isLoading, setIsLoading] = useState(false);
+    const [isTesting, setIsTesting] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -95,6 +98,27 @@ export default function UserProfile() {
         }
     };
 
+    const handleSendTestNotification = async () => {
+        setIsTesting(true);
+        try {
+            await notificationService.sendTestNotification();
+            notifications.show({
+                title: 'Success',
+                message: 'Test notification sent! Check your notification bar.',
+                color: 'blue'
+            });
+        } catch (error) {
+            console.error(error);
+            notifications.show({
+                title: 'Error',
+                message: error.response?.data?.message || 'Failed to send test notification',
+                color: 'red'
+            });
+        } finally {
+            setIsTesting(false);
+        }
+    };
+
 
     return (
         <div className="max-w-5xl mx-auto">
@@ -148,6 +172,26 @@ export default function UserProfile() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Test Notification Section */}
+                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                                <IconBellRinging size={20} />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800">Notifications</h3>
+                        </div>
+                        <p className="text-sm text-slate-500 mb-6">
+                            Test if your browser and system notifications are working properly.
+                        </p>
+                        <button
+                            onClick={handleSendTestNotification}
+                            disabled={isTesting}
+                            className="w-full flex items-center justify-center gap-2 py-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-2xl font-bold transition-all disabled:opacity-50"
+                        >
+                            {isTesting ? 'Sending...' : 'Send Test Notification'}
+                        </button>
                     </div>
                 </div>
 

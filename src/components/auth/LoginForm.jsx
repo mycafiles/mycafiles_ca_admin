@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Button from '../Button';
 import Input from '../Input';
 import { IconAlertCircle, IconArrowRight, IconLock, IconMail, IconEye, IconEyeOff, IconHelpCircle } from '@tabler/icons-react';
@@ -65,14 +66,13 @@ const LoginForm = ({ email, setEmail, password, setPassword, loading, error, onS
                         {loading ? 'Signing in...' : 'Sign In'}
                     </Button>
 
-                    <div className="pt-2 flex justify-between items-center border-t border-slate-100">
-                        <button type="button" className="text-[13px] font-bold text-blue-600 hover:text-blue-700">
+                    <div className="pt-2 flex justify-center items-center border-t border-slate-100">
+                        <Link to="/forgot-password" size="sm" className="text-[13px] font-bold text-blue-600 hover:text-blue-700">
                             Forgot Password?
-                        </button>
-                        <button type="button" className="flex items-center gap-1.5 text-[13px] font-bold text-slate-400 hover:text-slate-600">
-                            <IconHelpCircle size={16} stroke={2.5} />
-                            Contact Support
-                        </button>
+                        </Link>
+                        {/* <button type="button" className="flex items-center gap-1.5 text-[13px] font-bold text-slate-400 hover:text-slate-600">
+                            Need Help? <IconHelpCircle size={16} stroke={2.5} />
+                        </button> */}
                     </div>
                 </form>
             </div>

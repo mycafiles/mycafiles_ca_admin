@@ -100,19 +100,33 @@ export default function DriveExplorer({ clientId, activeYear }) {
 
     const handleUpload = async (files) => {
         const fileList = Array.isArray(files) ? files : [files];
-        if (fileList.length === 0 || !currentFolderId) return;
+
+        // Filter out images/photos as per requirement
+        const filteredFiles = fileList.filter(file => !file.type.startsWith('image/'));
+        const rejectedImages = fileList.filter(file => file.type.startsWith('image/'));
+
+        if (rejectedImages.length > 0) {
+            notifications.show({
+                color: 'red',
+                title: 'Images Not Allowed',
+                message: `${rejectedImages.length} image(s) skipped. Only documents and PDFs are permitted.`,
+                autoClose: 5000,
+            });
+        }
+
+        if (filteredFiles.length === 0 || !currentFolderId) return;
 
         try {
             notifications.show({
                 id: 'uploading',
                 loading: true,
                 title: 'Uploading...',
-                message: `Please wait while we upload ${fileList.length} file(s)`,
+                message: `Please wait while we upload ${filteredFiles.length} file(s)`,
                 autoClose: false,
                 withCloseButton: false,
             });
 
-            await Promise.all(fileList.map(file =>
+            await Promise.all(filteredFiles.map(file =>
                 driveService.uploadFile(file, {
                     clientId: clientId,
                     folderId: currentFolderId,
@@ -124,7 +138,7 @@ export default function DriveExplorer({ clientId, activeYear }) {
                 id: 'uploading',
                 color: 'green',
                 title: 'Success',
-                message: 'All files uploaded successfully',
+                message: 'All valid files uploaded successfully',
                 loading: false,
                 autoClose: 2000,
             });
@@ -329,7 +343,7 @@ export default function DriveExplorer({ clientId, activeYear }) {
                             onDrop={handleUpload}
                             onReject={() => notifications.show({ color: 'red', message: 'File rejected. Check file type/size.' })}
                             maxSize={50 * 1024 ** 2}
-                            accept={[...IMAGE_MIME_TYPE, ...PDF_MIME_TYPE, ...MS_EXCEL_MIME_TYPE]}
+                            accept={[...PDF_MIME_TYPE, ...MS_EXCEL_MIME_TYPE, 'text/csv', 'application/json']}
                             styles={{
                                 root: {
                                     border: '2px dashed var(--mantine-color-gray-3)',
@@ -350,7 +364,7 @@ export default function DriveExplorer({ clientId, activeYear }) {
                                 </ThemeIcon>
                                 <Box style={{ textAlign: 'center' }}>
                                     <Text fw={700} size="sm">Click to upload or drag and drop</Text>
-                                    <Text size="xs" c="dimmed">PDF, JPG, ZIP (MAX. 50MB) | Supported: Images, PDFs, Excel</Text>
+                                    <Text size="xs" c="dimmed">PDF, Excel, CSV, JSON (MAX. 50MB) | Strictly no images/photos</Text>
                                 </Box>
                             </Stack>
                         </Dropzone>

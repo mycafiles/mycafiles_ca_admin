@@ -9,30 +9,52 @@ import {
     Group,
     ScrollArea,
     Loader,
-    Center
+    Center,
+    Button
 } from '@mantine/core';
-import { IconHistory, IconSearch, IconBell } from '@tabler/icons-react';
+import { DatePickerInput } from '@mantine/dates';
+import { IconHistory, IconSearch, IconBell, IconCalendar, IconX } from '@tabler/icons-react';
+import '@mantine/dates/styles.css';
 import api from '../services/api';
 import dayjs from 'dayjs';
 
 export default function ActivityLog() {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [dateRange, setDateRange] = useState([null, null]);
+
+    const fetchLogs = async (forceParams = null) => {
+        setLoading(true);
+        try {
+            const params = {};
+            const range = forceParams || dateRange;
+
+            if (range[0]) params.startDate = dayjs(range[0]).startOf('day').toISOString();
+            if (range[1]) params.endDate = dayjs(range[1]).endOf('day').toISOString();
+
+            console.log('[ActivityLog Debug] Fetching with params:', params);
+            const response = await api.get('/activity', { params });
+            console.log(response, 'response');
+            setLogs(response.data.data);
+        } catch (error) {
+            console.error('Failed to fetch logs:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchLogs = async () => {
-            try {
-                const response = await api.get('/activity');
-                setLogs(response.data.data);
-            } catch (error) {
-                console.error('Failed to fetch logs:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchLogs();
     }, []);
+
+    const handleDateChange = (val) => {
+        setDateRange(val);
+        console.log('[ActivityLog Debug] Date range changed:', val);
+        // Only fetch if range is complete (both dates selected) or cleared (both null)
+        if ((val[0] && val[1]) || (!val[0] && !val[1])) {
+            fetchLogs(val);
+        }
+    };
 
     const getActionColor = (action) => {
         if (action.includes('CREATE')) return 'teal';
@@ -66,22 +88,15 @@ export default function ActivityLog() {
     const rows = logs.map((log) => (
         <Table.Tr key={log._id}>
             <Table.Td>
-                <Group gap="xs" wrap="nowrap">
-                    {log.action === 'UPLOAD_FILE' && (
-                        <Box className="p-1 bg-blue-50 rounded text-blue-600">
-                            <IconBell size={14} stroke={3} />
-                        </Box>
-                    )}
-                    <Badge variant="light" color={getActionColor(log.action)} size="sm">
-                        {actionLabels[log.action] || log.action}
-                    </Badge>
-                </Group>
+                <Badge variant="light" color={getActionColor(log.action)} size="sm">
+                    {actionLabels[log.action] || log.action}
+                </Badge>
+            </Table.Td>
+            <Table.Td>
+                <Text size="sm" fw={600} c="primary">{log.clientId?.name || log.clientName || 'System'}</Text>
             </Table.Td>
             <Table.Td>
                 <Text size="sm" fw={500}>{log.details}</Text>
-                {log.clientName && (
-                    <Text size="xs" c="dimmed">Client: {log.clientName}</Text>
-                )}
             </Table.Td>
             <Table.Td>
                 <Text size="sm" c="dimmed">
@@ -103,6 +118,38 @@ export default function ActivityLog() {
                         <IconHistory size={28} />
                     </div>
                 </Group>
+
+                <Group gap="sm" mb="md">
+                    <DatePickerInput
+                        type="range"
+                        placeholder="Filter by date range"
+                        value={dateRange}
+                        onChange={handleDateChange}
+                        leftSection={<IconCalendar size={18} stroke={1.5} />}
+                        clearable
+                        className="w-72"
+                        styles={{
+                            input: {
+                                borderRadius: '12px',
+                                height: '42px',
+                                border: '1px solid #e2e8f0',
+                                backgroundColor: 'white',
+                                fontWeight: 500
+                            }
+                        }}
+                    />
+                    {(dateRange[0] || dateRange[1]) && (
+                        <Button
+                            variant="subtle"
+                            color="gray"
+                            onClick={() => handleDateChange([null, null])}
+                            leftSection={<IconX size={16} />}
+                            size="sm"
+                        >
+                            Reset
+                        </Button>
+                    )}
+                </Group>
             </Box>
 
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -116,6 +163,7 @@ export default function ActivityLog() {
                             <Table.Thead style={{ backgroundColor: '#f8fafc' }}>
                                 <Table.Tr>
                                     <Table.Th><Text size="xs" fw={700} tt="uppercase" c="dimmed">Action</Text></Table.Th>
+                                    <Table.Th><Text size="xs" fw={700} tt="uppercase" c="dimmed">Client</Text></Table.Th>
                                     <Table.Th><Text size="xs" fw={700} tt="uppercase" c="dimmed">Description</Text></Table.Th>
                                     <Table.Th><Text size="xs" fw={700} tt="uppercase" c="dimmed">Date & Time</Text></Table.Th>
                                 </Table.Tr>
@@ -125,7 +173,7 @@ export default function ActivityLog() {
                                     rows
                                 ) : (
                                     <Table.Tr>
-                                        <Table.Td colSpan={3}>
+                                        <Table.Td colSpan={4}>
                                             <Center py={50}>
                                                 <Text c="dimmed">No activity logs found</Text>
                                             </Center>

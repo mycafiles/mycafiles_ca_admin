@@ -1,10 +1,14 @@
-import { IconUsers, IconFileAnalytics, IconFolder, IconPlus, IconUpload, IconPhoto, IconTrendingUp, IconClock, IconFileUpload, IconTrash, IconHistory, IconPlus as IconPlusCircle, IconBell } from '@tabler/icons-react';
+import { IconUsers, IconFileAnalytics, IconFolder, IconPlus, IconUpload, IconPhoto, IconTrendingUp, IconClock, IconFileUpload, IconTrash, IconHistory, IconPlus as IconPlusCircle, IconBell, IconBellRinging } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 import { clientService } from '../services/clientService';
 import api from '../services/api';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+
+dayjs.extend(relativeTime);
 
 export default function CAHome() {
     const navigate = useNavigate();
@@ -16,6 +20,7 @@ export default function CAHome() {
     });
     const [loading, setLoading] = useState(true);
     const [recentActivity, setRecentActivity] = useState([]);
+    const [recentNotifications, setRecentNotifications] = useState([]);
 
     // Mock data for client growth chart
     const chartData = [
@@ -48,13 +53,20 @@ export default function CAHome() {
                 const formattedRecent = activities
                     .slice(0, 5)
                     .map(activity => ({
-                        name: activity.clientName || 'System',
+                        name: activity.clientId?.name || activity.clientName || 'System',
                         time: getRelativeTime(activity.timestamp),
                         type: actionLabels[activity.action] || activity.action,
-                        action: activity.action
+                        action: activity.action,
+                        details: activity.details // Use the real detailed description
                     }));
 
                 setRecentActivity(formattedRecent);
+
+                // Fetch Recent Notifications
+                const notificationResponse = await api.get('/notifications');
+                const notifications = notificationResponse.data.data || [];
+                setRecentNotifications(notifications.slice(0, 5));
+
                 setLoading(false);
             } catch (err) {
                 console.error('Error fetching dashboard data:', err);
@@ -337,7 +349,7 @@ export default function CAHome() {
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold text-gray-900">🕐 Recent Activity</h3>
                         <button
-                            onClick={() => navigate('/dashboard/clients')}
+                            onClick={() => navigate('/dashboard/activity')}
                             className="text-sm text-primary hover:text-primary/80 font-medium"
                         >
                             View All →
@@ -353,17 +365,19 @@ export default function CAHome() {
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: index * 0.1 }}
-                                        className={`flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border-l-4 ${isUpload ? 'border-l-blue-500 bg-blue-50/10' : 'border-l-transparent'}`}
+                                        className={`flex items-start gap-4 p-4 rounded-xl hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100 ${isUpload ? 'bg-blue-50/10' : ''}`}
                                     >
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0 ${isUpload ? 'bg-blue-100 text-blue-600' : 'bg-primary/10 text-primary'}`}>
-                                            {isUpload ? <IconBell size={16} stroke={2.5} /> : activity.name.charAt(0)}
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base flex-shrink-0 shadow-sm ${isUpload ? 'bg-blue-100 text-blue-600' : 'bg-primary/10 text-primary'}`}>
+                                            {isUpload ? <IconUpload size={20} stroke={2.5} /> : activity.name.charAt(0)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-gray-900 truncate">
-                                                {activity.type}
+                                            <p className="text-sm font-bold text-gray-900 leading-tight">
+                                                {activity.details || activity.type}
                                             </p>
-                                            <p className="text-xs text-gray-500">
-                                                {activity.name} • {activity.time}
+                                            <p className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                                                <span className="font-semibold text-gray-700">{activity.name}</span>
+                                                <span>•</span>
+                                                <span className="flex items-center gap-1"><IconClock size={12} /> {activity.time}</span>
                                             </p>
                                         </div>
                                     </motion.div>
@@ -374,6 +388,59 @@ export default function CAHome() {
                         <div className="text-center py-8 text-gray-500">
                             <p className="text-sm">No recent activity</p>
                             <p className="text-xs mt-1">Start by adding your first client!</p>
+                        </div>
+                    )}
+                </motion.div>
+
+                {/* Recent Notifications */}
+                <motion.div variants={itemVariants} className="bg-white p-6 rounded-xl border border-border shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-gray-900">🔔 Recent Notifications</h3>
+                        <button
+                            onClick={() => navigate('/dashboard/notifications')}
+                            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                            View All →
+                        </button>
+                    </div>
+                    {recentNotifications.length > 0 ? (
+                        <div className="space-y-3">
+                            {recentNotifications.map((notif, index) => (
+                                <motion.div
+                                    key={notif._id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    className={`flex items-start gap-3 p-3 rounded-xl transition-all ${!notif.isRead ? 'bg-blue-50/40 border border-blue-100' : 'hover:bg-slate-50'}`}
+                                >
+                                    <div className={`p-2 rounded-lg ${!notif.isRead ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
+                                        {notif.type === 'FILE_UPLOAD' ? <IconFileUpload size={18} /> : <IconBellRinging size={18} />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-start">
+                                            <p className={`text-sm tracking-tight truncate ${!notif.isRead ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>
+                                                {notif.title}
+                                            </p>
+                                            {!notif.isRead && (
+                                                <div className="size-1.5 rounded-full bg-blue-500 shadow-sm mt-1.5 flex-shrink-0" />
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-slate-500 line-clamp-1 mt-0.5 font-medium">
+                                            {notif.message}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1.5 tracking-wider">
+                                            {dayjs(notif.createdAt).fromNow()}
+                                        </p>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-10 flex flex-col items-center gap-3">
+                            <div className="p-3 bg-slate-50 rounded-2xl text-slate-200">
+                                <IconBell size={32} stroke={1.5} />
+                            </div>
+                            <p className="text-sm text-slate-500 font-bold">No notifications yet</p>
                         </div>
                     )}
                 </motion.div>

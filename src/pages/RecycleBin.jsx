@@ -17,7 +17,7 @@ import { useDisclosure } from '@mantine/hooks';
 
 export default function RecycleBin() {
     const [clients, setClients] = useState([]);
-    const [selectedClient, setSelectedClient] = useState('');
+    const [selectedClient, setSelectedClient] = useState('all');
     const [binItems, setBinItems] = useState({ folders: [], files: [] });
     const [loading, setLoading] = useState(false);
     const [restoring, setRestoring] = useState(null); // id of item being restored/deleted
@@ -28,19 +28,12 @@ export default function RecycleBin() {
 
     useEffect(() => {
         fetchClients();
+        fetchBinItems('all'); // Initial fetch for all items
     }, []);
 
-    useEffect(() => {
-        // Auto-select first client if available
-        if (clients.length > 0 && !selectedClient) {
-            setSelectedClient(clients[0]._id);
-        }
-    }, [clients]);
 
     useEffect(() => {
-        if (selectedClient) {
-            fetchBinItems(selectedClient);
-        }
+        fetchBinItems(selectedClient || 'all');
     }, [selectedClient]);
 
     const fetchClients = async () => {

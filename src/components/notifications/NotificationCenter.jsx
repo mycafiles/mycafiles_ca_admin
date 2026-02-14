@@ -22,7 +22,7 @@ import {
     IconBellRinging,
     IconCircleCheck
 } from '@tabler/icons-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { notificationService } from '../../services/notificationService';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -32,11 +32,17 @@ dayjs.extend(relativeTime);
 
 export default function NotificationCenter() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [opened, setOpened] = useState(false);
-    const [filter, setFilter] = useState('all');
+    const [filter, setFilter] = useState('today');
+
+    // Close menu on route change
+    useEffect(() => {
+        setOpened(false);
+    }, [location.pathname]);
 
     const filteredNotifications = notifications.filter(n => {
         if (filter === 'unread') return !n.isRead;
@@ -191,7 +197,7 @@ export default function NotificationCenter() {
 
                 <ScrollArea.Autosize mah={400} type="hover">
                     {filteredNotifications.length > 0 ? (
-                        <Stack gap={0}>
+                        <Stack gap={0} p={20}>
                             {filteredNotifications.map((n) => (
                                 <UnstyledButton
                                     key={n._id}
@@ -251,11 +257,11 @@ export default function NotificationCenter() {
                     <UnstyledButton
                         onClick={() => {
                             setOpened(false);
-                            navigate('/dashboard/activity');
+                            navigate('/dashboard/notifications');
                         }}
                         className="w-full py-1 text-xs text-blue-600 font-bold hover:text-blue-700 transition-colors flex items-center justify-center gap-1"
                     >
-                        View all activity history →
+                        View all notification history →
                     </UnstyledButton>
                 </Box>
             </Menu.Dropdown>
