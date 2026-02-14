@@ -145,13 +145,14 @@ export default function DriveExplorer({ clientId, activeYear }) {
 
             loadData(); // Refresh
         } catch (err) {
+            const errorMessage = err.response?.data?.message || err.message || 'Something went wrong during upload';
             notifications.update({
                 id: 'uploading',
                 color: 'red',
                 title: 'Upload failed',
-                message: 'Something went wrong during upload',
+                message: errorMessage,
                 loading: false,
-                autoClose: 3000,
+                autoClose: 5000,
             });
         }
     };
@@ -341,7 +342,28 @@ export default function DriveExplorer({ clientId, activeYear }) {
                     <Box mb="xl">
                         <Dropzone
                             onDrop={handleUpload}
-                            onReject={() => notifications.show({ color: 'red', message: 'File rejected. Check file type/size.' })}
+                            onReject={(files) => {
+                                files.forEach(({ file, errors }) => {
+                                    const sizeInMb = (file.size / 1024 / 1024).toFixed(1);
+                                    const isSizeError = errors.some(e => e.code === 'file-too-large');
+
+                                    if (isSizeError) {
+                                        notifications.show({
+                                            color: 'red',
+                                            title: 'File Too Large',
+                                            message: `File "${file.name}" is ${sizeInMb} MB. Only 50 MB acceptable.`,
+                                            autoClose: 5000
+                                        });
+                                    } else {
+                                        notifications.show({
+                                            color: 'red',
+                                            title: 'File Rejected',
+                                            message: `File "${file.name}" was rejected. Check file type.`,
+                                            autoClose: 5000
+                                        });
+                                    }
+                                });
+                            }}
                             maxSize={50 * 1024 ** 2}
                             accept={[...PDF_MIME_TYPE, ...MS_EXCEL_MIME_TYPE, 'text/csv', 'application/json']}
                             styles={{

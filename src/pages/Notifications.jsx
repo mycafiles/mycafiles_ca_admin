@@ -81,6 +81,7 @@ export default function Notifications() {
     const getIcon = (type) => {
         switch (type) {
             case 'FILE_UPLOAD': return <IconFileUpload size={18} />;
+            case 'DEVICE_APPROVAL': return <IconCircleCheck size={18} />;
             default: return <IconBellRinging size={18} />;
         }
     };
@@ -100,21 +101,50 @@ export default function Notifications() {
         return true;
     });
 
+    const handleRowClick = async (n) => {
+        if (!n.isRead) {
+            await handleMarkAsRead(n._id);
+        }
+
+        switch (n.type) {
+            case 'FILE_UPLOAD':
+                if (n.metadata?.clientId) {
+                    navigate(`/dashboard/clients/${n.metadata.clientId}`);
+                }
+                break;
+            case 'DEVICE_APPROVAL':
+                navigate('/dashboard/home');
+                break;
+            default:
+                // No specific navigation for general
+                break;
+        }
+    };
+
     const rows = filteredNotifications.map((n) => (
-        <Table.Tr key={n._id} className={!n.isRead ? 'bg-blue-50/20' : ''}>
+        <Table.Tr
+            key={n._id}
+            className={`${!n.isRead ? 'bg-blue-50/20' : ''} cursor-pointer hover:bg-slate-50 transition-colors`}
+            onClick={() => handleRowClick(n)}
+        >
             <Table.Td>
-                <Group gap="md">
-                    <Box className={`p-2 rounded-xl ${!n.isRead ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>
+                <Group gap="md" wrap="nowrap">
+                    <Box className={`size-10 shrink-0 flex items-center justify-center rounded-2xl transition-all ${!n.isRead ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-slate-100 text-slate-400'}`}>
                         {getIcon(n.type)}
                     </Box>
-                    <Box>
-                        <Group gap="xs" mb={2}>
-                            <Text size="sm" fw={!n.isRead ? 800 : 600} c={!n.isRead ? 'slate.9' : 'slate.7'}>
+                    <Box className="flex-1 min-w-0">
+                        <Group gap="xs" mb={1} wrap="nowrap">
+                            <Text size="sm" fw={!n.isRead ? 800 : 700} c={!n.isRead ? 'slate.9' : 'slate.7'} className="truncate">
                                 {n.title}
                             </Text>
-                            {!n.isRead && <Badge size="xs" variant="filled" color="blue">New</Badge>}
+                            {!n.isRead && <Badge size="xs" variant="gradient" gradient={{ from: 'blue', to: 'cyan' }}>New</Badge>}
                         </Group>
-                        <Text size="xs" c="dimmed" lineClamp={1}>{n.message}</Text>
+                        <Group gap={6} align="center">
+                            {n.sender?.name && (
+                                <Text size="10px" c="blue" fw={800} tt="uppercase" className="shrink-0 tracking-wider">FROM: {n.sender.name}</Text>
+                            )}
+                            <Text size="xs" c="dimmed" fw={500} lineClamp={1} className="flex-1 italic">{n.message}</Text>
+                        </Group>
                     </Box>
                 </Group>
             </Table.Td>
@@ -160,13 +190,13 @@ export default function Notifications() {
     return (
         <Stack gap="xl" py="sm">
             <Box>
-                <Group justify="space-between" align="center" mb="md">
+                <Group justify="space-between" align="flex-end" mb="md">
                     <Box>
-                        <Title order={1} fw={900} size="32px" mb={4}>Notifications</Title>
+                        <Title order={1} fw={900} size="32px" mb={4} className="tracking-tight">Notifications</Title>
                         <Text c="dimmed" size="sm" fw={500}>View and manage all system alerts and client notifications</Text>
                     </Box>
-                    <div className="bg-primary/5 p-3 rounded-2xl text-primary">
-                        <IconBell size={28} />
+                    <div className="bg-blue-50 text-blue-600 p-2.5 rounded-2xl border border-blue-100 shadow-sm">
+                        <IconBell size={24} stroke={2.5} />
                     </div>
                 </Group>
             </Box>

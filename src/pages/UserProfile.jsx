@@ -175,7 +175,7 @@ export default function UserProfile() {
                     </div>
 
                     {/* Test Notification Section */}
-                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
+                    {/* <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
                                 <IconBellRinging size={20} />
@@ -192,7 +192,7 @@ export default function UserProfile() {
                         >
                             {isTesting ? 'Sending...' : 'Send Test Notification'}
                         </button>
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* Right Column: Edit Forms */}
