@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Title, Text, Button, Group, Stack, Box, ThemeIcon, Container } from '@mantine/core';
 import { modals } from '@mantine/modals';
-import { IconPlus } from '@tabler/icons-react';
+import { IconPlus, IconX } from '@tabler/icons-react';
 
 import {
     fetchClients,
@@ -268,6 +268,12 @@ export default function ClientList() {
         } else {
             setIsUploading(false);
             setUploadProgress(0);
+            notifications.show({
+                title: 'Upload Failed',
+                message: result.payload || 'An error occurred during bulk upload',
+                color: 'red',
+                icon: <IconX size={16} />
+            });
         }
     };
 

@@ -1,6 +1,12 @@
-import { IconUsers, IconFileAnalytics, IconFolder, IconPlus, IconUpload, IconPhoto, IconTrendingUp, IconClock, IconFileUpload, IconTrash, IconHistory, IconPlus as IconPlusCircle, IconBell, IconBellRinging } from '@tabler/icons-react';
-import { useEffect, useState } from 'react';
+import { IconUsers, IconFileAnalytics, IconFolder, IconPlus, IconUpload, IconPhoto, IconTrendingUp, IconClock, IconFileUpload, IconTrash, IconHistory, IconPlus as IconPlusCircle, IconBell, IconBellRinging, IconX } from '@tabler/icons-react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { notifications } from '@mantine/notifications';
+import { Stack } from '@mantine/core';
+import { fetchClients, addClient, bulkUploadClients } from '../store/slices/clientSlice';
+import ClientModals from '../components/clients/ClientModals';
+import BulkUploadResultModal from '../components/clients/BulkUploadResultModal';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 import { clientService } from '../services/clientService';
@@ -12,6 +18,9 @@ dayjs.extend(relativeTime);
 
 export default function CAHome() {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const { items: clients } = useSelector((state) => state.clients);
+
     const [stats, setStats] = useState({
         totalClients: 0,
         pendingApprovals: 0,
@@ -21,6 +30,32 @@ export default function CAHome() {
     const [loading, setLoading] = useState(true);
     const [recentActivity, setRecentActivity] = useState([]);
     const [recentNotifications, setRecentNotifications] = useState([]);
+
+    // Modal states
+    const [addModalOpen, setAddModalOpen] = useState(false);
+    const [bulkModalOpen, setBulkModalOpen] = useState(false);
+    const [bulkFile, setBulkFile] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [resultModalOpen, setResultModalOpen] = useState(false);
+    const [uploadResult, setUploadResult] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
+
+    // Form state
+    const [formData, setFormData] = useState({
+        name: '',
+        mobileNumber: '',
+        panNumber: '',
+        gstNumber: '',
+        tanNumber: '',
+        tradeNumber: '',
+        gstId: '',
+        gstPassword: '',
+        address: '',
+        dob: null,
+        type: 'INDIVIDUAL'
+    });
+    const [errors, setErrors] = useState({});
 
     // Mock data for client growth chart
     const chartData = [
@@ -79,6 +114,132 @@ export default function CAHome() {
         const interval = setInterval(fetchDashboardData, 60000);
         return () => clearInterval(interval);
     }, []);
+
+    const validateField = (name, value) => {
+        let error = '';
+        if (name === 'name' && value.length < 2) error = 'Name too short';
+
+        if (name === 'mobileNumber' && !/^\d{10}$/.test(value)) error = 'Invalid mobile number (10 digits required)';
+
+        if (name === 'panNumber' && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) {
+            error = 'Invalid PAN Number (Ex: ABCDE1234F)';
+        }
+
+        if (name === 'gstNumber' && value) {
+            const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+            if (!gstRegex.test(value)) {
+                error = 'Invalid GST Number (Ex: 22ABCDE1234F1Z5)';
+            } else if (formData.panNumber && value.substring(2, 12) !== formData.panNumber) {
+                error = 'GST Number does not match the entered PAN';
+            }
+        }
+
+        if (name === 'tanNumber' && value) {
+            if (value.length !== 10) {
+                error = 'TDS Number must be 10 characters long';
+            }
+        }
+
+        return error;
+    };
+
+    const handleInputChange = (name, value) => {
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        const error = validateField(name, value);
+        setErrors(prev => ({ ...prev, [name]: error }));
+    };
+
+    const validate = () => {
+        const newErrors = {};
+        if (formData.name.length < 2) newErrors.name = 'Name too short';
+
+        if (!/^\d{10}$/.test(formData.mobileNumber)) newErrors.mobileNumber = 'Invalid mobile number (10 digits required)';
+
+        // PAN: 5 uppercase letters, 4 digits, 1 uppercase letter
+        if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panNumber)) {
+            newErrors.panNumber = 'Invalid PAN Number (Ex: ABCDE1234F)';
+        }
+
+        // GST: 2 digits + PAN + 1 char + Z + 1 char
+        if (formData.gstNumber) {
+            const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+            if (!gstRegex.test(formData.gstNumber)) {
+                newErrors.gstNumber = 'Invalid GST Number (Ex: 22ABCDE1234F1Z5)';
+            } else if (formData.panNumber && formData.gstNumber.substring(2, 12) !== formData.panNumber) {
+                newErrors.gstNumber = 'GST Number does not match the entered PAN';
+            }
+        }
+
+        // TDS: Length 10
+        if (formData.tanNumber) {
+            if (formData.tanNumber.length !== 10) {
+                newErrors.tanNumber = 'TDS Number must be 10 characters long';
+            }
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleAddClient = async (e) => {
+        e.preventDefault();
+        if (!validate()) return;
+
+        setSubmitting(true);
+        try {
+            const result = await dispatch(addClient(formData));
+            if (!result.error) {
+                setAddModalOpen(false);
+                setFormData({ name: '', mobileNumber: '', panNumber: '', gstNumber: '', tanNumber: '', tradeNumber: '', gstId: '', gstPassword: '', address: '', dob: null, type: 'INDIVIDUAL' });
+                notifications.show({
+                    title: 'Success',
+                    message: 'Client registered successfully!',
+                    color: 'green'
+                });
+            }
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleBulkUpload = async () => {
+        if (!bulkFile) return;
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        const result = await dispatch(bulkUploadClients({
+            file: bulkFile,
+            onProgress: (progress) => {
+                // Upload part: 0-90%
+                setUploadProgress(Math.round(progress * 0.9));
+            }
+        }));
+
+        if (!result.error) {
+            setUploadProgress(100);
+
+            setTimeout(() => {
+                setBulkModalOpen(false);
+                setBulkFile(null);
+                setIsUploading(false);
+                setUploadProgress(0);
+
+                // Show result modal instead of notification
+                setUploadResult(result.payload);
+                setResultModalOpen(true);
+            }, 500);
+        } else {
+            setIsUploading(false);
+            setUploadProgress(0);
+            notifications.show({
+                title: 'Upload Failed',
+                message: result.payload || 'An error occurred during bulk upload',
+                color: 'red',
+                icon: <IconX size={16} />
+            });
+        }
+    };
 
     const actionLabels = {
         'CREATE_CLIENT': 'Client Created',
@@ -150,7 +311,22 @@ export default function CAHome() {
             icon: IconPlus,
             color: 'bg-primary',
             hoverColor: 'hover:bg-primary/90',
-            onClick: () => navigate('/dashboard/clients')
+            onClick: () => {
+                setFormData({
+                    name: '',
+                    mobileNumber: '',
+                    panNumber: '',
+                    gstNumber: '',
+                    tanNumber: '',
+                    tradeNumber: '',
+                    gstId: '',
+                    gstPassword: '',
+                    address: '',
+                    dob: null,
+                    type: 'INDIVIDUAL'
+                });
+                setAddModalOpen(true);
+            }
         },
         {
             title: 'Bulk Upload',
@@ -158,7 +334,7 @@ export default function CAHome() {
             icon: IconUpload,
             color: 'bg-indigo-600',
             hoverColor: 'hover:bg-indigo-700',
-            onClick: () => navigate('/dashboard/clients')
+            onClick: () => setBulkModalOpen(true)
         },
         {
             title: 'Manage Banners',
@@ -445,6 +621,42 @@ export default function CAHome() {
                     )}
                 </motion.div>
             </div>
+
+            {/* Feature Modals */}
+            <ClientModals
+                addModalOpen={addModalOpen}
+                setAddModalOpen={setAddModalOpen}
+                editModalOpen={false} // Edit not needed on home dashboard
+                setEditModalOpen={() => { }}
+                bulkModalOpen={bulkModalOpen}
+                setBulkModalOpen={setBulkModalOpen}
+                formData={formData}
+                setFormData={setFormData}
+                errors={errors}
+                handleAddClient={handleAddClient}
+                handleEditClient={() => { }}
+                handleDeleteClient={() => { }}
+                handleBulkUpload={handleBulkUpload}
+                bulkFile={bulkFile}
+                setBulkFile={setBulkFile}
+                isUploading={isUploading}
+                uploadProgress={uploadProgress}
+                selectedClient={null}
+                handleInputChange={handleInputChange}
+                submitting={submitting}
+            />
+
+            {/* Bulk Upload Result Modal */}
+            <BulkUploadResultModal
+                opened={resultModalOpen}
+                onClose={() => {
+                    setResultModalOpen(false);
+                    setUploadResult(null);
+                    // Refresh stats after closing result modal
+                    dispatch(fetchClients());
+                }}
+                result={uploadResult}
+            />
         </motion.div>
     );
 }

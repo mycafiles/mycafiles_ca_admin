@@ -172,14 +172,13 @@ const ClientModals = ({
                         <Group grow align="flex-start" mt="md">
                             <DateInput
                                 label="Date of Birth"
-                                placeholder="DD MMMM YYYY"
+                                placeholder="DD/MM/YYYY"
                                 value={formData.dob}
                                 onChange={(date) => handleInputChange('dob', date)}
                                 leftSection={<IconCalendar size={18} color="var(--mantine-color-dimmed)" />}
                                 radius="md"
-                                required
                                 clearable
-                                valueFormat="DD MMM YYYY"
+                                valueFormat="DD/MM/YYYY"
                             />
                         </Group>
 
