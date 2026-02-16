@@ -257,7 +257,7 @@ export default function DriveExplorer({ clientId, activeYear }) {
                 >
                     Download
                 </Menu.Item>
-                <Menu.Item
+                {/* <Menu.Item
                     leftSection={<IconEye size={14} />}
                     onClick={(e) => {
                         e.stopPropagation();
@@ -265,7 +265,7 @@ export default function DriveExplorer({ clientId, activeYear }) {
                     }}
                 >
                     Preview
-                </Menu.Item>
+                </Menu.Item> */}
                 <Menu.Item
                     color="red"
                     leftSection={<IconTrash size={14} />}
