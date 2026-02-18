@@ -30,7 +30,7 @@ const ClientModals = ({
                 name: 'Rajesh Kumar',
                 mobileNumber: '9876543210',
                 panNumber: 'ABCDE1234F',
-                type: 'INDIVIDUAL',
+                type: 'INDIVIDUAL', // Optional: will be individual if no GST
                 email: 'rajesh@example.com',
                 gstNumber: '',
                 tanNumber: '',
@@ -40,7 +40,7 @@ const ClientModals = ({
                 name: 'Kriyona Business Solution',
                 mobileNumber: '9123456789',
                 panNumber: 'FGHIJ5678K',
-                type: 'BUSINESS',
+                type: 'BUSINESS', // Optional: will be business if GST present
                 email: 'contact@kriyona.com',
                 gstNumber: '24ABCDE1234F1Z5',
                 tanNumber: 'ABCD12345E',
